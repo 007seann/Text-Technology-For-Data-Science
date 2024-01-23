@@ -1,18 +1,21 @@
 from PostingLinkedList import PostingLinkedList
 from Tokeniser import Tokeniser
-import json
 from nltk.stem import PorterStemmer
+from xml.etree import ElementTree as ET
+import json
+import os
+import sys
 
-config = json.loads("/backend/indexer/config.json")
+string_path = "../../"
+ROOT_DIR = os.path.abspath(string_path)
+sys.path.append(ROOT_DIR)
 
-INDEX_SAVE_PATH = config["index_save_path"]
-COLLCETION_PATH = config["collection_path"]
-STOPWORDS = config["stopwords_path"]
+with open("config.json", 'r') as file:
+    config = json.load(file)
 
-# Placeholder files 
+INDEX_SAVE_PATH = config["index_root_dir"]
+COLLCETION_PATH = config["collection_root_dir"]
 
-class XMLDocParser:
-    pass
 
 class PositionalIndex:
     def __init__(self):            
@@ -87,13 +90,6 @@ class PositionalIndex:
         # Add document to set.
         self.document_ids.add(doc_id)
     
-    def extract_tokens(self, query):
-        # Tokenise, stem and check for stop words.
-        if self.enable_stopping:
-            return [self.stemmer.stem(token) for token in self.tokeniser.tokenise(search_query) if token not in self.stopwords]
-        else:
-            return [self.stemmer.stem(token) for token in self.tokeniser.tokenise(search_query)]
-    
     def reset_index(self):
         self.index = {}
         self.document_ids = set()
@@ -139,3 +135,34 @@ class PositionalIndex:
             self.index[current_word] = (int(doc_freq), doc_posting_pairs)
             self.vocabulary.add(current_word)
             self.vocabulary_size += 1
+            
+class XMLDocParser:
+    def __init__(self, filename):
+        self.filename = filename
+
+    def stream_docs(self):
+        if not os.path.exists(self.filename):
+            raise Exception("File does not exist: ", self.filename)
+        
+        # Use iterparse for efficient streaming
+        context = ET.iterparse(self.filename, events=("start", "end"))
+        current_doc = {}
+        
+        for event, elem in context:
+            tag = elem.tag
+
+            if event == "start" and tag == "DOC":
+                current_doc = {}
+
+            elif event == "end":
+                if tag == "DOC":
+                    yield current_doc
+                    elem.clear()  # Free up memory
+                elif tag in ["DOCNO", "PROFILE", "DATE", "HEADLINE", "BYLINE", "DATELINE", "TEXT", "PUB", "PAGE"]:
+                    current_doc[tag] = elem.text.strip() if elem.text else ""
+                elem.clear()
+                
+                
+    
+if __name__ == "__main__":
+    pass
