@@ -1,0 +1,141 @@
+from PostingLinkedList import PostingLinkedList
+from Tokeniser import Tokeniser
+import json
+from nltk.stem import PorterStemmer
+
+config = json.loads("/backend/indexer/config.json")
+
+INDEX_SAVE_PATH = config["index_save_path"]
+COLLCETION_PATH = config["collection_path"]
+STOPWORDS = config["stopwords_path"]
+
+# Placeholder files 
+
+class XMLDocParser:
+    pass
+
+class PositionalIndex:
+    def __init__(self):            
+        # Stemming and Tokenisation utils
+        self.stemmer = PorterStemmer() # TODO
+        self.tokeniser = Tokeniser() #TODO
+        
+        # In memory data
+        self.index = {}
+        self.document_ids = set()
+        self.vocabulary = set()
+        self.vocabulary_size = 0
+    
+    # Will take an XML parsed doc. 
+    def insert_document(self, document, include_subsections=False):
+        doc_id = document.get("DOCNO")
+    
+        # Document has already been added. 
+        if doc_id in self.document_ids:
+            return
+        
+        # We collapse document into two sections
+        merged_text = document.get("HEADLINE", "") + " " + document.get("TEXT", "")
+        
+        # Used if we need do to read any other subsections
+        if include_subsections:
+            for tag in ["PROFILE", "DATE", "BYLINE", "DATELINE", "PUB", "PAGE"]:
+                merged_text += document.get(tag, "")
+        
+        # Mapping between token {term : PostingLinkedList}
+        term_posting_mapping = {}
+        token_index = 0
+        token_stream = self.tokeniser.tokenise(merged_text)
+        
+        for token in token_stream:
+            if self.enable_stopping and (token in self.stopwords):
+                continue
+            
+            stemmed_token = self.stemmer.stem(token)
+            
+            # Caching the term and current posting
+            if stemmed_token in term_posting_mapping:
+                term_posting_mapping[stemmed_token].insert(token_index)
+            else:
+                term_posting = PostingLinkedList()
+                term_posting.insert(token_index)
+                term_posting_mapping[stemmed_token] = term_posting
+            token_index += 1
+        
+        # Adding the term and posting to our index.
+        for (term, new_postings) in term_posting_mapping.items():
+            if term in self.index:
+                doc_freq, doc_dict = self.index[term]
+        
+                if doc_id in doc_dict:
+                    updated_postings_list = doc_dict[doc_id].union(new_postings)
+                    doc_dict.update({ doc_id : updated_postings_list})
+                    
+                    self.index[term] = (doc_freq, doc_dict)
+                else:
+                    doc_freq = doc_freq + 1
+                    doc_dict.update({ doc_id : new_postings})
+                    
+                    self.index[term] = (doc_freq, doc_dict)
+            else:
+                self.vocabulary.add(term)
+                self.vocabulary_size += 1
+                
+                doc_freq = 1
+                self.index[term] = (doc_freq, {doc_id : new_postings})
+        
+        # Add document to set.
+        self.document_ids.add(doc_id)
+    
+    def extract_tokens(self, query):
+        # Tokenise, stem and check for stop words.
+        if self.enable_stopping:
+            return [self.stemmer.stem(token) for token in self.tokeniser.tokenise(search_query) if token not in self.stopwords]
+        else:
+            return [self.stemmer.stem(token) for token in self.tokeniser.tokenise(search_query)]
+    
+    def reset_index(self):
+        self.index = {}
+        self.document_ids = set()
+        self.vocabulary = set()
+        self.vocabulary_size = 0
+        
+    def save_index(self, save_path=INDEX_SAVE_PATH):
+        sorted_vocabulary = sorted(self.vocabulary)
+        with open(save_path, 'w') as file:
+            for term in sorted_vocabulary:
+                (doc_freq, doc_dict) = self.index[term]
+                file.write(term + ":" + str(doc_freq) + "\n")
+                doc_list = sorted(doc_dict.keys())
+                for doc_id in doc_list:
+                    posting_string = ",".join(map(str, doc_dict[doc_id].toList()))
+                    file.write("\t" + doc_id + ":" + posting_string + "\n")
+                
+    def load_index(self, load_path=INDEX_SAVE_PATH):
+        self.vocabulary_size = 0
+        self.vocabulary = set()
+        self.index = {}
+        
+        with open(load_path, 'r') as file:
+            lines = file.readlines()
+            current_word = None
+            doc_freq = None
+            doc_posting_pairs = {}
+            for line in lines:
+                if not line.startswith('\t'):
+                    if current_word:
+                        self.index[current_word] = (int(doc_freq), doc_posting_pairs)
+                        self.vocabulary.add(current_word)
+                        self.vocabulary_size += 1
+                        
+                    word, doc_freq = line.split(":")
+                    current_word = word
+                    doc_posting_pairs = {}
+                else:
+                    doc_id, positions = line.strip().split(':')
+                    doc_posting_pairs[doc_id] = PostingLinkedList(list(map(int, positions.split(','))))
+                    self.document_ids.add(doc_id)
+                    
+            self.index[current_word] = (int(doc_freq), doc_posting_pairs)
+            self.vocabulary.add(current_word)
+            self.vocabulary_size += 1
