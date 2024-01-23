@@ -1,0 +1,6 @@
+{
+    "test_value":23,
+    "index_path":"some_path",
+    "stopword_path":"some_path",
+    "collection_path":"some_path"
+}
