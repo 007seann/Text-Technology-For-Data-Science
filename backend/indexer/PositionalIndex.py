@@ -5,6 +5,12 @@ from nltk.stem import PorterStemmer
 import os
 import xml.etree.ElementTree as ET
 
+config = json.loads("/backend/indexer/config.json")
+
+INDEX_SAVE_PATH = config["index_save_path"]
+COLLECTION_PATH = config["collection_path"]
+STOPWORDS = config["stopwords_path"]
+
 # Placeholder files 
 
 class XMLDocParser:
