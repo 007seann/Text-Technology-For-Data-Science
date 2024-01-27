@@ -12,8 +12,30 @@ STOPWORDS = config["stopwords_path"]
 # Placeholder files 
 
 class XMLDocParser:
-    pass
+    def __init__(self, filename):
+        self.filename = filename
 
+    def stream_docs(self):
+        if not os.path.exists(self.filename):
+            raise Exception("File does not exist: ", self.filename)
+        
+        # Use iterparse for efficient streaming
+        context = ET.iterparse(self.filename, events=("start", "end"))
+        current_doc = {}
+        
+        for event, elem in context:
+            tag = elem.tag
+
+            if event == "start" and tag == "DOC":
+                current_doc = {}
+
+            elif event == "end":
+                if tag == "DOC":
+                    yield current_doc
+                    elem.clear()  # Free up memory
+                elif tag in ["DOCNO", "PROFILE", "DATE", "HEADLINE", "BYLINE", "DATELINE", "TEXT", "PUB", "PAGE"]:
+                    current_doc[tag] = elem.text.strip() if elem.text else ""
+                elem.clear()
 class PositionalIndex:
     def __init__(self):            
         # Stemming and Tokenisation utils
@@ -139,3 +161,4 @@ class PositionalIndex:
             self.index[current_word] = (int(doc_freq), doc_posting_pairs)
             self.vocabulary.add(current_word)
             self.vocabulary_size += 1
+    
