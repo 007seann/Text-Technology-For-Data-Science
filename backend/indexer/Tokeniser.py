@@ -11,7 +11,7 @@ class Tokeniser:
         Use stopping (i.e., remove English stop words such as 'and', 'or', and 'but')
     """
 
-    def __init__(self, use_stopping=True, punctuations_to_keep=[]):
+    def __init__(self, use_stopping=False, punctuations_to_keep=[]):
         """
         Initialise the Tokeniser class
 
@@ -26,7 +26,7 @@ class Tokeniser:
         self.ner = spacy.load('en_core_web_sm')
 
     def _read_stop_words(self):
-        with open('ttds_2023_english_stop_words.txt.txt', 'r') as f:
+        with open('english_stop_words.txt', 'r') as f:
             stop_words = set(f.read().split("\n"))
         return stop_words
 
