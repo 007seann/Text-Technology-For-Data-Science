@@ -2,12 +2,8 @@ from PostingLinkedList import PostingLinkedList
 from Tokeniser import Tokeniser
 import json
 from nltk.stem import PorterStemmer
-
-config = json.loads("/backend/indexer/config.json")
-
-INDEX_SAVE_PATH = config["index_save_path"]
-COLLCETION_PATH = config["collection_path"]
-STOPWORDS = config["stopwords_path"]
+import os
+import xml.etree.ElementTree as ET
 
 # Placeholder files 
 
@@ -21,21 +17,25 @@ class XMLDocParser:
         
         # Use iterparse for efficient streaming
         context = ET.iterparse(self.filename, events=("start", "end"))
-        current_doc = {}
-        
+        text_doc = {} # Contains body text
+        meta_doc = {} # Contains metadata (E.g. headline, date, author, etc)
         for event, elem in context:
             tag = elem.tag
 
             if event == "start" and tag == "DOC":
-                current_doc = {}
-
+                text_doc = {}
+                meta_doc = {}
             elif event == "end":
                 if tag == "DOC":
-                    yield current_doc
+                    yield text_doc, meta_doc
                     elem.clear()  # Free up memory
-                elif tag in ["DOCNO", "PROFILE", "DATE", "HEADLINE", "BYLINE", "DATELINE", "TEXT", "PUB", "PAGE"]:
-                    current_doc[tag] = elem.text.strip() if elem.text else ""
+                elif tag == "TEXT":
+                    text_doc[tag] = elem.text.strip() if elem.text else ""
+                else:
+                    meta_doc[tag] = elem.text.strip() if elem.text else ""
                 elem.clear()
+
+                
 class PositionalIndex:
     def __init__(self):            
         # Stemming and Tokenisation utils
@@ -112,9 +112,9 @@ class PositionalIndex:
     def extract_tokens(self, query):
         # Tokenise, stem and check for stop words.
         if self.enable_stopping:
-            return [self.stemmer.stem(token) for token in self.tokeniser.tokenise(search_query) if token not in self.stopwords]
+            return [self.stemmer.stem(token) for token in self.tokeniser.tokenise(query) if token not in self.stopwords]
         else:
-            return [self.stemmer.stem(token) for token in self.tokeniser.tokenise(search_query)]
+            return [self.stemmer.stem(token) for token in self.tokeniser.tokenise(query)]
     
     def reset_index(self):
         self.index = {}
