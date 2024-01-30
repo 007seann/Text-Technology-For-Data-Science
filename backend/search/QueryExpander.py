@@ -1,5 +1,4 @@
 from nltk.corpus import wordnet as wn
-import nltk
 import random
 import spacy
 
@@ -54,7 +53,8 @@ class QueryExpander:
             else:
                 synsets = []
             if synsets:
-                synset = random.choice(synsets)
+                different_words = [synset for synset in synsets if synset.lemmas()[0].name() != token.text]
+                synset = random.choice(different_words)
                 new_query_tokens[new_query_tokens.index(token.text)] = synset.lemmas()[0].name()
         print("Old query: {}".format(query_tokens))
         print("New query: {}".format(new_query_tokens))
