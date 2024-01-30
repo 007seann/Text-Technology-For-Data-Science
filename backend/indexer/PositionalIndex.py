@@ -53,6 +53,8 @@ class PositionalIndex:
         self.document_ids = set()
         self.vocabulary = set()
         self.vocabulary_size = 0
+        
+        self.headline_index = {}
     
     # Will take an XML parsed doc. 
     def insert_document(self, document_text, document_metadata, include_subsections=False):
@@ -64,11 +66,46 @@ class PositionalIndex:
         
         # We collapse document into two sections
         merged_text = document_metadata.get("HEADLINE", "") + " " + document_text.get("TEXT", "")
-        
+        headline = document_metadata.get('HEADLINE', "")
         # Used if we need do to read any other subsections
         if include_subsections:
             for tag in ["PROFILE", "DATE", "BYLINE", "DATELINE", "PUB", "PAGE"]:
                 merged_text += document_metadata.get(tag, "")
+
+        print(headline)
+        # Building Extent Index. headline : {docId: spans}
+        headline_token_stream = self.tokeniser.tokenise(headline)
+        print("headline_token_stream", headline_token_stream)
+
+        
+        # Mapping between token {term : PostingLinkedList}
+        term_posting_mapping = {}
+        token_index = 0
+        token_stream = self.tokeniser.tokenise(merged_text)
+        
+        for token in token_stream:
+            
+            stemmed_token = self.stemmer.stem(token) if self.enable_stemming else token
+            
+            # Caching the term and current posting
+            if stemmed_token in term_posting_mapping:
+                term_posting_mapping[stemmed_token].insert(token_index)
+            else:
+                term_posting = PostingLinkedList()
+                term_posting.insert(token_index)
+                term_posting_mapping[stemmed_token] = term_posting
+            token_index += 1
+        
+        # Building span, which is window of the headline
+        span = []
+        if headline_token_stream in token_stream:
+            for headline_token in headline_token_stream:
+                span.append(term_posting_mapping[headline_token])
+
+        # Adding the headline and the span to our haedline index
+        self.headline_index[doc_id] = span
+        
+        print(self.headline_index)
         
         # Mapping between token {term : PostingLinkedList}
         term_posting_mapping = {}
@@ -368,7 +405,8 @@ if __name__ == '__main__':
     source_file = "../../exploration/selected_news_articles.xml"
     
     # Can be disabled once index is generated. 
-    #xml_parser = XMLDocParser(source_file)
-    #for doc_text,meta_data in xml_parser.stream_docs():
-    #    p.insert_document(doc_text, meta_data)
-    #p.save_index()
+    xml_parser = XMLDocParser(source_file)
+    for doc_text,meta_data in xml_parser.stream_docs():
+
+        p.insert_document(doc_text, meta_data)
+    p.save_index()
