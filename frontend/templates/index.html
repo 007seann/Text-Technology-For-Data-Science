@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title> News Search Engine </title>
+    <link href = "static/style.css" rel = "stylesheet" type = "text/css">
+
+     
+</head>
+<body>
+    <div class="header">
+        <nav>          
+            <u1 class = "nav-links">
+                <li><b><a href = "/">HOME</a></b></li>
+                <li><b><a href = "/about">ABOUT</a></b></li>
+                <li><b><a href = "">HELP</a></b></li>
+            </u1>  
+        </nav>
+    </div>
+    <div class = "logo-video">
+        <video playsinline autoplay muted>    
+            <source src = "static/rev_blue.mp4" type = "video/mp4">
+        </video> 
+    </div>
+    <div class = "content">    
+        <form method="post" action="{{ url_for('search_result') }}">
+            <input type = "text" placeholder = "&#x270e; Search for News ...">
+            
+            <button type = "submit">SEARCH</button>
+            
+        </form>
+ 
+    </div>
+         
+</body>
+</html>
