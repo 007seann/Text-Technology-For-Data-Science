@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 INDEX_SAVE_PATH = "../database/index/index_base.txt"
 #COLLECTION_PATH = config["collection_path"]
-#STOPWORDS = config["stopwords_path"]
+STOPWORDS = "english_stop_words.txt"
 
 # Placeholder files 
 
@@ -53,7 +53,6 @@ class PositionalIndex:
         self.document_ids = set()
         self.vocabulary = set()
         self.vocabulary_size = 0
-        
         self.headline_index = {}
     
     # Will take an XML parsed doc. 
@@ -72,42 +71,42 @@ class PositionalIndex:
             for tag in ["PROFILE", "DATE", "BYLINE", "DATELINE", "PUB", "PAGE"]:
                 merged_text += document_metadata.get(tag, "")
 
-        print(headline)
-        # Building Extent Index. headline : {docId: spans}
+        ## Building Extent Index. { (headline) : {docId: spans} }, where a headline of an article is stemmed and does not include stopwords as well as an article.
         headline_token_stream = self.tokeniser.tokenise(headline)
-        print("headline_token_stream", headline_token_stream)
-
-        
-        # Mapping between token {term : PostingLinkedList}
-        term_posting_mapping = {}
-        token_index = 0
         token_stream = self.tokeniser.tokenise(merged_text)
         
-        for token in token_stream:
-            
-            stemmed_token = self.stemmer.stem(token) if self.enable_stemming else token
-            
-            # Caching the term and current posting
-            if stemmed_token in term_posting_mapping:
-                term_posting_mapping[stemmed_token].insert(token_index)
-            else:
-                term_posting = PostingLinkedList()
-                term_posting.insert(token_index)
-                term_posting_mapping[stemmed_token] = term_posting
-            token_index += 1
-        
-        # Building span, which is window of the headline
-        span = []
-        if headline_token_stream in token_stream:
-            for headline_token in headline_token_stream:
-                span.append(term_posting_mapping[headline_token])
+        with open(file = STOPWORDS, mode= 'r') as f:
+            stopwords = set(f.read().split())
 
-        # Adding the headline and the span to our haedline index
-        self.headline_index[doc_id] = span
+        token_stream_without_stopwords = [token for token in token_stream if token not in stopwords]
+        stemmed_tokens = []
+        headline_token_stream_without_stopwords = [token for token in headline_token_stream if token not in stopwords]
+        stemmed_headline_tokens = []
+        headline = []
         
-        print(self.headline_index)
+        for token in token_stream_without_stopwords:
+            stemmed_token = self.stemmer.stem(token) if self.enable_stemming else token
+            stemmed_tokens.append(stemmed_token)
         
-        # Mapping between token {term : PostingLinkedList}
+        for token in headline_token_stream_without_stopwords:
+            stemmed_headline_token = self.stemmer.stem(token) if self.enable_stemming else token
+            stemmed_headline_tokens.append(stemmed_headline_token)
+            headline.append(stemmed_headline_token)
+
+        span = [] # This is the span of the article headline position. i.e. span =[0,1,2] means the headline position span is from 0 to 2 of the headline-text-merged article.
+        for index, token in enumerate(stemmed_tokens):
+            for h_index, h_token in enumerate(stemmed_headline_tokens):
+                if token == h_token:
+                    span.append(index)
+                    del stemmed_headline_tokens[h_index]
+                    break
+                        
+
+        self.headline_index[tuple(headline)] = {doc_id: span}
+        
+
+        
+        ## Mapping between token {term : PostingLinkedList}
         term_posting_mapping = {}
         token_index = 0
         token_stream = self.tokeniser.tokenise(merged_text)
