@@ -32,11 +32,36 @@ class VectorSpaceModel:
                 count_matrix[token][i] = tokenised_document.count(token)
         return count_matrix
     
-    def calculate_tf_idf(self, term_freq, doc_freq, use_smoothing=True):
-        k = 0
-        if use_smoothing:
-            k = 1
-        return (1 + math.log10(term_freq + k)) * (math.log10(self.N / doc_freq + k))
+    def calculate_tf(self, token, term_freq, mode):
+        term_freqs = self.count_matrix[token].values()
+        if term_freq == 0:
+            return 0
+        case = {
+            'n': lambda x: x,
+            'l': lambda x: 1 + math.log10(x),
+            'a': lambda x: 0.5 + (0.5 * (x / max(term_freqs)))
+        }
+        return case[mode](term_freq)
+
+    def calculate_idf(self, doc_freq, mode):
+        case = {
+            'n': lambda x: 1,
+            't': lambda x: math.log10(self.N / x),
+            'p': lambda x: max(0, math.log10((self.N - x) / x))
+        }
+        return case[mode](doc_freq)
+    
+    def calculate_tf_idf(self, token, doc_id, tf_mode='l', idf_mode = 't', normalisation_mode='n'):
+        term_freq = self.count_matrix[token][doc_id]
+        doc_freq = sum([1 for doc_id in self.count_matrix[token] if self.count_matrix[token][doc_id] > 0])
+        tf = self.calculate_tf(token, term_freq, mode=tf_mode)
+        idf = self.calculate_idf(doc_freq, mode=idf_mode)
+        # TODO Add more normalisations
+        case = {
+            'n': lambda x: x,
+        }
+        return case[normalisation_mode](tf * idf)
+
 
     def calculate_bm25(self, term_freq, doc_freq, L_d, L_bar, k=1.5):
         tf_component = (term_freq) / (k * (L_d / L_bar) + term_freq + 0.5)
@@ -48,9 +73,7 @@ class VectorSpaceModel:
         for token in self.count_matrix:
             tf_idf_matrix[token] = {}
             for doc_id in self.count_matrix[token]:
-                tf = self.count_matrix[token][doc_id]
-                df = len(self.count_matrix[token])
-                tf_idf_matrix[token][doc_id] = self.calculate_tf_idf(tf, df)
+                tf_idf_matrix[token][doc_id] = self.calculate_tf_idf(token, doc_id)
         return tf_idf_matrix
 
     def make_bm25_matrix(self):
@@ -62,7 +85,7 @@ class VectorSpaceModel:
                 tf = self.count_matrix[token][doc_id]
                 df = len(self.count_matrix[token])
                 L_d = len(self.tokenised_documents[doc_id])
-                bm25_matrix[token][doc_id] = self.calculate_bm25(tf, df, L_d, L_bar)
+                bm25_matrix[token][doc_id] = -1 * self.calculate_bm25(tf, df, L_d, L_bar)
         return bm25_matrix
     
     def get_tfidf_query_vector(self, query):
@@ -78,7 +101,6 @@ class VectorSpaceModel:
         return query_vector
     
     def get_bm25_query_vector(self, query):
-        print(query)
         tokenised_query = self.tokeniser.tokenise(query)
         query_vector = np.array([0 for _ in range(len(self.vocab))])
         for i in range(len(self.vocab)):
@@ -120,7 +142,6 @@ class VectorSpaceModel:
         :return: The cosine similarity between the query and the documents.
         """
         cosine_similarity = np.zeros((len(self.tokenised_documents), 1))
-        # self.tokenised_document is a dictionary of {token: {doc_id: count}}
         for token in self.count_matrix:
             for doc_id in self.count_matrix[token]:
                 cosine_similarity[doc_id] += query_vector[self.vocab.index(token)] * self.score_matrix[token][doc_id]
@@ -138,14 +159,12 @@ class VectorSpaceModel:
 
 if __name__ == '__main__':
     documents = [
-        "This is the first document.",
-        "This document is the second document.",
+        "This is the first document and second document.",
+        "This document is the second document and fourth document.",
         "And this is the third one.",
         "Is this the first document?",
     ]
     query = "This document might be the second document."
     vsm = VectorSpaceModel(documents, mode='bm25')
-    query_vector = vsm.get_query_vector(query)
-    top_n = vsm.get_top_n(query_vector, 1)
-    print(top_n)
+    print(vsm.score_matrix)
 
