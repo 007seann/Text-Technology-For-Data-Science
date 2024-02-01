@@ -1,6 +1,9 @@
 from pprint import pprint as pp
 from collections import defaultdict
 from PostingLinkedList import PostingLinkedList
+import matplotlib.pyplot as plt
+import networkx as nx
+
 class WordIndexNode:
     def __init__(self):
         self.children = {}
@@ -43,6 +46,44 @@ class WordIndex:
                 traverse(child_node, word + char)
         traverse(self.root, "")
         return word_list
+    
+    def visualize_word_index(self, letter_font_size=12, 
+                            posting_font_size=10,
+                            node_color='lightblue',
+                            edge_color='gray',
+                            posting_offset=50):
+        G = nx.DiGraph()
+        node_id = 0
+        node_positions = {}
+
+        def add_node(parent_id, char, node, postings):
+            nonlocal node_id
+            current_id = node_id
+            G.add_node(current_id)
+            if parent_id is not None:
+                G.add_edge(parent_id, current_id)
+            node_id += 1
+            return current_id
+
+        def traverse(node, parent_id=None, word=''):
+            postings = [str(post) for post in node.doc_postings.values()]
+            current_id = add_node(parent_id, word[-1] if word else 'root', node, postings)
+            label = str(word[-1]).upper() if word else 'root'
+            node_positions[current_id] = {'label': label, 'postings': postings}
+            for char, child in node.children.items():
+                traverse(child, current_id, word + char)
+
+        traverse(self.root)
+        pos = nx.nx_agraph.graphviz_layout(G, prog='dot')
+        nx.draw(G, pos, with_labels=False, arrows=False, node_color=node_color, edge_color=edge_color, node_size=2000)
+
+        for node_id, position in pos.items():
+            label = node_positions[node_id]['label']
+            postings = node_positions[node_id]['postings']
+            plt.text(position[0], position[1], label, fontsize=letter_font_size, fontweight='bold', ha='center', va='center')
+            plt.text(position[0], position[1] - posting_offset, '\n'.join(postings), fontsize=posting_font_size, ha='center', va='center')
+
+        plt.show()
     
     def __len__(self):
         return self.index_size
