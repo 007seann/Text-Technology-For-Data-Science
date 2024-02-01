@@ -1,5 +1,3 @@
-# from sklearn.feature_extraction.text import TfidfVectorizer
-
 import numpy as np
 from Tokeniser import Tokeniser
 import math
@@ -11,6 +9,7 @@ class VectorSpaceModel:
         self.tokeniser = Tokeniser()
         self.tokenised_documents = [self.tokeniser.tokenise(document) for document in documents]
         self.N = len(self.tokenised_documents)
+        self.L_bar = sum([len(document) for document in self.tokenised_documents]) / self.N
         self.vocab = self.make_vocab()
         self.count_matrix = self.make_count_matrix()
         self.score_matrix = self.make_score_matrix()
@@ -79,16 +78,16 @@ class VectorSpaceModel:
         return query_vector
     
     def get_bm25_query_vector(self, query):
+        print(query)
         tokenised_query = self.tokeniser.tokenise(query)
         query_vector = np.array([0 for _ in range(len(self.vocab))])
-        L_bar = sum([len(document) for document in self.tokenised_documents]) / len(self.tokenised_documents)
         for i in range(len(self.vocab)):
             token = self.vocab[i]
             if token in tokenised_query:
                 tf = tokenised_query.count(token)
                 df = len(self.count_matrix[token])
                 L_d = len(tokenised_query)
-                bm25 = self.calculate_bm25(tf, df, L_d, L_bar)
+                bm25 = self.calculate_bm25(tf, df, L_d, self.L_bar)
                 query_vector[i] = bm25
         return query_vector
 
@@ -120,7 +119,12 @@ class VectorSpaceModel:
         :param query_vector: The vector representation of the query.
         :return: The cosine similarity between the query and the documents.
         """
-        pass
+        cosine_similarity = np.zeros((len(self.tokenised_documents), 1))
+        # self.tokenised_document is a dictionary of {token: {doc_id: count}}
+        for token in self.count_matrix:
+            for doc_id in self.count_matrix[token]:
+                cosine_similarity[doc_id] += query_vector[self.vocab.index(token)] * self.score_matrix[token][doc_id]
+        return cosine_similarity
     
     def get_top_n(self, query_vector, n):
         """
@@ -139,7 +143,9 @@ if __name__ == '__main__':
         "And this is the third one.",
         "Is this the first document?",
     ]
-    query = ["This document might be the second document."]
+    query = "This document might be the second document."
     vsm = VectorSpaceModel(documents, mode='bm25')
-    print(vsm.score_matrix)
+    query_vector = vsm.get_query_vector(query)
+    top_n = vsm.get_top_n(query_vector, 1)
+    print(top_n)
 
