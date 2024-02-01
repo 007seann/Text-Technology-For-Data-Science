@@ -113,31 +113,6 @@ class VectorSpaceModel:
         tf_component = (term_freq) / (k * (L_d / self.L_bar) + term_freq + 0.5)
         idf_component = math.log10((self.N - doc_freq + 0.5) / (doc_freq + 0.5))
         return tf_component * idf_component
-    
-    def get_tfidf_query_vector(self, query):
-        tokenised_query = self.tokeniser.tokenise(query)
-        query_vector = np.array([0 for _ in range(len(self.vocab))])
-        for i in range(len(self.vocab)):
-            token = self.vocab[i]
-            if token in tokenised_query:
-                tf = tokenised_query.count(token)
-                df = len(self.count_matrix[token])
-                tfidf = self.calculate_tf_idf(tf, df)
-                query_vector[i] = tfidf
-        return query_vector
-    
-    def get_bm25_query_vector(self, query):
-        tokenised_query = self.tokeniser.tokenise(query)
-        query_vector = np.array([0 for _ in range(len(self.vocab))])
-        for i in range(len(self.vocab)):
-            token = self.vocab[i]
-            if token in tokenised_query:
-                tf = tokenised_query.count(token)
-                df = len(self.count_matrix[token])
-                L_d = len(tokenised_query)
-                bm25 = self.calculate_bm25(tf, df, L_d, self.L_bar)
-                query_vector[i] = bm25
-        return query_vector
 
     def get_query_vector(self, query):
         """
@@ -145,10 +120,17 @@ class VectorSpaceModel:
         :param query: The query.
         :return: The vector representation of the query.
         """
-        if self.mode == "tfidf":
-            return self.get_tfidf_query_vector(query)
-        elif self.mode == "bm25":
-            return self.get_bm25_query_vector(query)
+        score_function = {
+            'tfidf': self.calculate_tf_idf,
+            'bm25': self.calculate_bm25
+        }
+        query_vector = np.zeros(len(self.vocab))
+        tokenised_query = self.tokeniser.tokenise(query)
+        for token in tokenised_query:
+            if token in self.vocab:
+                pos = self.vocab.index(token)
+                # TODO Figure out how to handle query as vector
+                query_vector[pos] = score_function[self.mode](token, -1)
         
     def make_score_matrix(self):
         """
