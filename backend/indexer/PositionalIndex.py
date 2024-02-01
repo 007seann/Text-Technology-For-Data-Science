@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 INDEX_SAVE_PATH = "../database/index/index_base.txt"
 #COLLECTION_PATH = config["collection_path"]
-#STOPWORDS = config["stopwords_path"]
+STOPWORDS = "english_stop_words.txt"
 
 # Placeholder files 
 
@@ -53,6 +53,7 @@ class PositionalIndex:
         self.document_ids = set()
         self.vocabulary = set()
         self.vocabulary_size = 0
+        self.headline_index = {}
     
     # Will take an XML parsed doc. 
     def insert_document(self, document_text, document_metadata, include_subsections=False):
@@ -64,13 +65,48 @@ class PositionalIndex:
         
         # We collapse document into two sections
         merged_text = document_metadata.get("HEADLINE", "") + " " + document_text.get("TEXT", "")
-        
+        headline = document_metadata.get('HEADLINE', "")
         # Used if we need do to read any other subsections
         if include_subsections:
             for tag in ["PROFILE", "DATE", "BYLINE", "DATELINE", "PUB", "PAGE"]:
                 merged_text += document_metadata.get(tag, "")
+
+        ## Building Extent Index. { (headline) : {docId: spans} }, where a headline of an article is stemmed and does not include stopwords as well as an article.
+        headline_token_stream = self.tokeniser.tokenise(headline)
+        token_stream = self.tokeniser.tokenise(merged_text)
         
-        # Mapping between token {term : PostingLinkedList}
+        with open(file = STOPWORDS, mode= 'r') as f:
+            stopwords = set(f.read().split())
+
+        token_stream_without_stopwords = [token for token in token_stream if token not in stopwords]
+        stemmed_tokens = []
+        headline_token_stream_without_stopwords = [token for token in headline_token_stream if token not in stopwords]
+        stemmed_headline_tokens = []
+        headline = []
+        
+        for token in token_stream_without_stopwords:
+            stemmed_token = self.stemmer.stem(token) if self.enable_stemming else token
+            stemmed_tokens.append(stemmed_token)
+        
+        for token in headline_token_stream_without_stopwords:
+            stemmed_headline_token = self.stemmer.stem(token) if self.enable_stemming else token
+            stemmed_headline_tokens.append(stemmed_headline_token)
+            headline.append(stemmed_headline_token)
+
+        span = [] # This is the span of the article headline position. i.e. span =[0,1,2] means the headline position span is from 0 to 2 of the headline-text-merged article.
+        for index, token in enumerate(stemmed_tokens):
+            for h_index, h_token in enumerate(stemmed_headline_tokens):
+                if token == h_token:
+                    span.append(index)
+                    del stemmed_headline_tokens[h_index]
+                    break
+                        
+
+        self.headline_index[tuple(headline)] = {doc_id: span}
+        
+
+        
+        ## Mapping between token {term : PostingLinkedList}
         term_posting_mapping = {}
         token_index = 0
         token_stream = self.tokeniser.tokenise(merged_text)
@@ -368,7 +404,8 @@ if __name__ == '__main__':
     source_file = "../../exploration/selected_news_articles.xml"
     
     # Can be disabled once index is generated. 
-    #xml_parser = XMLDocParser(source_file)
-    #for doc_text,meta_data in xml_parser.stream_docs():
-    #    p.insert_document(doc_text, meta_data)
-    #p.save_index()
+    xml_parser = XMLDocParser(source_file)
+    for doc_text,meta_data in xml_parser.stream_docs():
+
+        p.insert_document(doc_text, meta_data)
+    p.save_index()
