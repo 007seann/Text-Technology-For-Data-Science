@@ -134,28 +134,6 @@ class VectorSpaceModel:
             return self.make_tfidf_matrix()
         elif self.mode == "bm25":
             return self.make_bm25_matrix()
-    
-    def cosine_similarity(self, query_vector):
-        """
-        Calculates the cosine similarity between the query and the documents.
-        :param query_vector: The vector representation of the query.
-        :return: The cosine similarity between the query and the documents.
-        """
-        cosine_similarity = np.zeros((len(self.tokenised_documents), 1))
-        for token in self.count_matrix:
-            for doc_id in self.count_matrix[token]:
-                cosine_similarity[doc_id] += query_vector[self.vocab.index(token)] * self.score_matrix[token][doc_id]
-        return cosine_similarity
-    
-    def get_top_n(self, query_vector, n):
-        """
-        Returns the top n documents based on the cosine similarity.
-        :param query_vector: The vector representation of the query.
-        :param n: The number of documents to return.
-        :return: The top n documents.
-        """
-        cosine_similarity = self.cosine_similarity(query_vector)
-        return np.argsort(cosine_similarity, axis=0)[-n:][::-1]
 
 if __name__ == '__main__':
     documents = [
