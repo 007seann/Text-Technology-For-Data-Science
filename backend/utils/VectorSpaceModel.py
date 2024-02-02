@@ -12,7 +12,7 @@ class VectorSpaceModel:
         self.L_bar = sum([len(document) for document in self.tokenised_documents]) / self.N
         self.vocab = self.make_vocab()
 
-        # TODO Turn into lists to save space
+        # TODO Turn into sparse matrices to save space
         # Inverted Index of the form {token: {doc_id: count}}
         self.count_matrix = self.make_count_matrix()
 
