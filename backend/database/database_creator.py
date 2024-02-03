@@ -47,6 +47,7 @@ def load_data(hostname):
     try:
         corpus = pd.read_csv("collection/news_corpus.csv")
         corpus.insert(0, "doc_id", list(range(corpus.shape[0])))
+        corpus = corpus.sample(50)
         
         conn_string = f'postgresql://postgres:12345@{hostname}/postgres'
         db = create_engine(conn_string) 
@@ -62,4 +63,5 @@ def load_data(hostname):
 
 
 #filter_news()
-#load_data("localhost")
+#"94.156.35.233"
+load_data("94.156.35.233")
