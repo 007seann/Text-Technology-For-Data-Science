@@ -1,5 +1,6 @@
 from flask import Flask
 import psycopg2 
+from database2html import Database2HTML
 
 app = Flask(__name__)
 
@@ -25,8 +26,11 @@ def retrieve_new(id):
     date, title, article = data
     curr.close()
     conn.close()
+
+    # Create html result
+    html = Database2HTML(date, title, article).create_html()
     
-    return {"date" : date, "title" : title, "article" : article}, 200
+    return html, 200
 
 if __name__ == "__main__":
     app.run(debug=True)
