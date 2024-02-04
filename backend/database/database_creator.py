@@ -39,21 +39,26 @@ def filter_news():
 
     news_corpus["date"] = pd.to_datetime(news_corpus["date"]).dt.date
     news_corpus.sort_values(by=['date'], inplace=True)
-    news_corpus.to_csv("collection/news_corpus.csv",index=False)
+    news_corpus.to_csv("collection/corpus_1.csv",index=False)
     
      
 
 def load_data(hostname):
     try:
-        corpus = pd.read_csv("collection/news_corpus.csv")
-        corpus.insert(0, "doc_id", list(range(corpus.shape[0])))
-        corpus = corpus.sample(50)
+        # Corpus created by Tanatip
+        corpus_1 = pd.read_csv("collection/corpus_1.csv")
+        # Corpus created by Stella
+        corpus_2 = pd.read_csv("collection/corpus_2.csv").rename(columns={"published" : "date", "text" : "article"})
+        # Merging both news corpus together and sampling 1000 news from there
+        news_corpus = pd.concat([corpus_1, corpus_2], ignore_index=True).sample(1000)
+        # Adding ID to each sample
+        news_corpus.insert(0, "doc_id", list(range(1, news_corpus.shape[0] + 1)))
         
         conn_string = f'postgresql://postgres:12345@{hostname}/postgres'
         db = create_engine(conn_string) 
         conn = db.connect()
 
-        corpus.to_sql("news", conn, if_exists="replace", index=False)
+        news_corpus.to_sql("news", conn, if_exists="replace", index=False)
         
     except Exception as e:
         print(e)
@@ -63,5 +68,4 @@ def load_data(hostname):
 
 
 #filter_news()
-#"94.156.35.233"
 load_data("94.156.35.233")
