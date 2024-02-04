@@ -5,9 +5,9 @@ import scipy.sparse as sp
 
 class VectorSpaceModel:
 
-    def __init__(self, documents, mode='tfidf'):
+    def __init__(self, documents, use_stopping=True, mode='tfidf'):
         self.mode = mode
-        self.tokeniser = Tokeniser()
+        self.tokeniser = Tokeniser(use_stopping=use_stopping)
         self.tokenised_documents = [self.tokeniser.tokenise(document) for document in documents]
         self.N = len(self.tokenised_documents)
         self.L_bar = sum([len(document) for document in self.tokenised_documents]) / self.N
@@ -16,8 +16,7 @@ class VectorSpaceModel:
         # Inverted Index of the form {token: {doc_id: count}} (Sparse Matrix)
         self.count_matrix = self.make_count_matrix()
 
-        # Score Matrix of the form {doc_id: {token: score}}
-        # TODO Make Sparse Matrix
+        # Score Matrix of the form {doc_id: {token: score}} (Sparse Matrix)
         self.score_matrix = self.make_score_matrix()
 
     def make_vocab(self):
@@ -26,11 +25,12 @@ class VectorSpaceModel:
         :param documents: The documents.
         :return: The vocabulary of the documents.
         """
-        vocab = set()
+        vocab = list()
         for tokenised_document in self.tokenised_documents:
-            vocab.update(tokenised_document)
-        vocab = list(vocab)
-        vocab.sort()
+            for token in tokenised_document:
+                if token not in vocab:
+                    vocab.append(token)
+        # Do we need this?
         return vocab
     
     def make_count_matrix(self):
@@ -56,11 +56,10 @@ class VectorSpaceModel:
             'tfidf': self.calculate_tf_idf,
             'bm25': self.calculate_bm25
         }
-        score_matrix = {}
+        score_matrix = sp.dok_matrix((self.N, len(self.vocab)))
         for doc_id, _ in enumerate(self.tokenised_documents):
-            score_matrix[doc_id] = {}
-            for pos, token in enumerate(self.vocab):
-                score_matrix[doc_id][pos] = score_function[self.mode](token, doc_id)
+            for token_id, token in enumerate(self.vocab):
+                score_matrix[doc_id, token_id] = score_function[self.mode](token, doc_id)
         return score_matrix
     
     def calculate_tf(self, token, doc_id, mode, is_query=False, query_term_freq=None):
@@ -169,7 +168,7 @@ class VectorSpaceModel:
         """
         similarity = {}
         for doc_id in range(self.N):
-            similarity[doc_id] = np.dot(list(self.score_matrix[doc_id].values()), query_vector.toarray())
+            similarity[doc_id] = np.dot(self.score_matrix[doc_id].toarray(), query_vector.toarray())[0][0]
         return similarity
 
 if __name__ == '__main__':
@@ -180,7 +179,7 @@ if __name__ == '__main__':
         "Is this the first document?",
     ]
     query = "Is this the second document?"
-    vsm = VectorSpaceModel(documents, mode='tfidf')
+    vsm = VectorSpaceModel(documents, use_stopping=False, mode='bm25')
     query_vector = vsm.get_query_vector(query)
     similarity = vsm.calculate_vector_similarity(query_vector)
     print(similarity)
