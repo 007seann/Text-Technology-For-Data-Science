@@ -45,7 +45,24 @@ class VectorSpaceModel:
                 count_matrix[token_index, doc_id] = tokenised_document.count(token)
         return count_matrix
     
-    def calculate_tf(self, token, doc_id, mode):
+    def make_score_matrix(self):
+        """
+        Returns the score matrix of the documents.
+        :param documents: The documents.
+        :return: The score matrix of the documents.
+        """
+        score_function = {
+            'tfidf': self.calculate_tf_idf,
+            'bm25': self.calculate_bm25
+        }
+        score_matrix = {}
+        for doc_id, _ in enumerate(self.tokenised_documents):
+            score_matrix[doc_id] = {}
+            for pos, token in enumerate(self.vocab):
+                score_matrix[doc_id][pos] = score_function[self.mode](token, doc_id)
+        return score_matrix
+    
+    def calculate_tf(self, token, doc_id, mode, is_query=False, query_term_freq=None):
         """
         Returns the term frequency of a token in a document.
         :param token: The token.
@@ -53,13 +70,18 @@ class VectorSpaceModel:
         :param mode: The mode of calculation.
         :return: The term frequency of a token in a document.
         """
-        term_freqs = self.count_matrix[token].values()
-        term_freq = self.count_matrix[token][doc_id]
+        term_freqs = self.count_matrix.getcol(doc_id).toarray()
+        if is_query:
+            term_freq = query_term_freq
+        else:
+            token_id = self.vocab.index(token)
+            term_freq = self.count_matrix[token_id, doc_id]
         if term_freq == 0:
             return 0
         case = {
             'n': lambda x: x,
             'l': lambda x: 1 + math.log10(x),
+            # Only works with calculating tf for a matrix not a query.
             'a': lambda x: 0.5 + (0.5 * (x / max(term_freqs)))
         }
         return case[mode](term_freq)
@@ -78,7 +100,7 @@ class VectorSpaceModel:
         }
         return case[mode](doc_freq)
     
-    def calculate_tf_idf(self, token, doc_id, tf_mode='l', idf_mode = 't', normalisation_mode='n'):
+    def calculate_tf_idf(self, token, doc_id, tf_mode='l', idf_mode = 't', normalisation_mode='n', is_query=False, query_term_freq=None):
         """
         Returns the tf-idf score of a token in a document.
         :param token: The token.
@@ -86,10 +108,13 @@ class VectorSpaceModel:
         :param tf_mode: The mode of calculation of term frequency.
         :param idf_mode: The mode of calculation of inverse document frequency.
         :param normalisation_mode: The mode of normalisation.
+        :param is_query: Whether the token is in a query.
+        :param query_term_freq: The term frequency of the token in the query.
         :return: The tf-idf score of a token in a document.
         """
-        doc_freq = sum([1 for doc_id in self.count_matrix[token] if self.count_matrix[token, doc_id] > 0])
-        tf = self.calculate_tf(token, doc_id, mode=tf_mode)
+        token_id = self.vocab.index(token)
+        doc_freq = self.count_matrix.getrow(token_id).count_nonzero()
+        tf = self.calculate_tf(token, doc_id, mode=tf_mode, is_query=is_query, query_term_freq=query_term_freq)
         idf = self.calculate_idf(doc_freq, mode=idf_mode)
         # TODO Add more normalisations
         case = {
@@ -97,7 +122,7 @@ class VectorSpaceModel:
         }
         return case[normalisation_mode](tf * idf)
 
-    def calculate_bm25(self, token, doc_id, k=1.5):
+    def calculate_bm25(self, token, doc_id, is_query=False, query_term_freq=None, k=1.5):
         """
         Returns the bm25 score of a token in a document.
         :param token: The token.
@@ -106,7 +131,10 @@ class VectorSpaceModel:
         :return: The bm25 score of a token in a document.
         """
         token_id = self.vocab.index(token)
-        term_freq = self.count_matrix[token_id, doc_id]
+        if is_query:
+            term_freq = query_term_freq
+        else:
+            term_freq = self.count_matrix[token_id, doc_id]
         doc_freq = self.count_matrix.getrow(token_id).count_nonzero()
         L_d = len(self.tokenised_documents[doc_id])
         tf_component = (term_freq) / (k * (L_d / self.L_bar) + term_freq + 0.5)
@@ -123,30 +151,25 @@ class VectorSpaceModel:
             'tfidf': self.calculate_tf_idf,
             'bm25': self.calculate_bm25
         }
-        query_vector = np.zeros(len(self.vocab))
+        query_vector = sp.dok_array((len(self.vocab), 1))
         tokenised_query = self.tokeniser.tokenise(query)
         for token in tokenised_query:
             if token in self.vocab:
-                pos = self.vocab.index(token)
-                # TODO Figure out how to handle query as vector
-                query_vector[pos] = score_function[self.mode](token, -1)
-        
-    def make_score_matrix(self):
+                token_id = self.vocab.index(token)
+                token_count = tokenised_query.count(token)
+                query_vector[token_id, 0] = score_function[self.mode](token, 0, is_query=True, query_term_freq=token_count)
+        return query_vector
+    
+    def calculate_vector_similarity(self, query_vector):
         """
-        Returns the score matrix of the documents.
-        :param documents: The documents.
-        :return: The score matrix of the documents.
+        Returns the similarity of the query vector with the document vectors.
+        :param query_vector: The query vector.
+        :return: The similarity of the query vector with the document vectors.
         """
-        score_function = {
-            'tfidf': self.calculate_tf_idf,
-            'bm25': self.calculate_bm25
-        }
-        score_matrix = {}
-        for doc_id, _ in enumerate(self.tokenised_documents):
-            score_matrix[doc_id] = {}
-            for pos, token in enumerate(self.vocab):
-                score_matrix[doc_id][pos] = score_function[self.mode](token, doc_id)
-        return score_matrix
+        similarity = {}
+        for doc_id in range(self.N):
+            similarity[doc_id] = np.dot(list(self.score_matrix[doc_id].values()), query_vector.toarray())
+        return similarity
 
 if __name__ == '__main__':
     documents = [
@@ -155,7 +178,9 @@ if __name__ == '__main__':
         "And this is the third one.",
         "Is this the first document?",
     ]
-    query = "This document might be the second document."
-    vsm = VectorSpaceModel(documents, mode='bm25')
-    print(vsm.score_matrix)
+    query = "Is this the second document?"
+    vsm = VectorSpaceModel(documents, mode='tfidf')
+    query_vector = vsm.get_query_vector(query)
+    similarity = vsm.calculate_vector_similarity(query_vector)
+    print(similarity)
 
