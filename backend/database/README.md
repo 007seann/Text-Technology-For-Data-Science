@@ -10,7 +10,7 @@ On Windows:
 
 2. From the root directory, navigate to the database folder using **cd backend/database**
 
-3. Run the backend application on local machine with **py backend_app.py**
+3. Run the backend application on local machine with **py backend_app.py** and keep it running until you no longer need to use API.
 
 4. When you want to call the API to query a news with ID **x**, i.e either on Postman or in a Python application, use the GET request with URL **http://127.0.0.1:5000/api/news/x**
 
