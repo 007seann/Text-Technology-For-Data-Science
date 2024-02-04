@@ -17,6 +17,7 @@ class VectorSpaceModel:
         self.count_matrix = self.make_count_matrix()
 
         # Score Matrix of the form {doc_id: {token: score}}
+        # TODO Make Sparse Matrix
         self.score_matrix = self.make_score_matrix()
 
     def make_vocab(self):
