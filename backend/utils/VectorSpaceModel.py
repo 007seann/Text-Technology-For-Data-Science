@@ -1,6 +1,7 @@
 import numpy as np
 from Tokeniser import Tokeniser
 import math
+import scipy.sparse as sp
 
 class VectorSpaceModel:
 
@@ -12,8 +13,7 @@ class VectorSpaceModel:
         self.L_bar = sum([len(document) for document in self.tokenised_documents]) / self.N
         self.vocab = self.make_vocab()
 
-        # TODO Turn into sparse matrices to save space
-        # Inverted Index of the form {token: {doc_id: count}}
+        # Inverted Index of the form {token: {doc_id: count}} (Sparse Matrix)
         self.count_matrix = self.make_count_matrix()
 
         # Score Matrix of the form {doc_id: {token: score}}
@@ -39,12 +39,10 @@ class VectorSpaceModel:
         :return: The count matrix of the documents.
         Count Matrix = {token: {doc_id: count}}
         """
-        vocab = self.vocab
-        count_matrix = {}
-        for token in vocab:
-            count_matrix[token] = {}
-            for i, tokenised_document in enumerate(self.tokenised_documents):
-                count_matrix[token][i] = tokenised_document.count(token)
+        count_matrix = sp.dok_matrix((len(self.vocab), self.N))
+        for token_index, token in enumerate(self.vocab):
+            for doc_id, tokenised_document in enumerate(self.tokenised_documents):
+                count_matrix[token_index, doc_id] = tokenised_document.count(token)
         return count_matrix
     
     def calculate_tf(self, token, doc_id, mode):
@@ -90,7 +88,7 @@ class VectorSpaceModel:
         :param normalisation_mode: The mode of normalisation.
         :return: The tf-idf score of a token in a document.
         """
-        doc_freq = sum([1 for doc_id in self.count_matrix[token] if self.count_matrix[token][doc_id] > 0])
+        doc_freq = sum([1 for doc_id in self.count_matrix[token] if self.count_matrix[token, doc_id] > 0])
         tf = self.calculate_tf(token, doc_id, mode=tf_mode)
         idf = self.calculate_idf(doc_freq, mode=idf_mode)
         # TODO Add more normalisations
@@ -107,8 +105,9 @@ class VectorSpaceModel:
         :param k: The k value.
         :return: The bm25 score of a token in a document.
         """
-        term_freq = self.count_matrix[token][doc_id]
-        doc_freq = sum([1 for doc_id in self.count_matrix[token] if self.count_matrix[token][doc_id] > 0])
+        token_id = self.vocab.index(token)
+        term_freq = self.count_matrix[token_id, doc_id]
+        doc_freq = self.count_matrix.getrow(token_id).count_nonzero()
         L_d = len(self.tokenised_documents[doc_id])
         tf_component = (term_freq) / (k * (L_d / self.L_bar) + term_freq + 0.5)
         idf_component = math.log10((self.N - doc_freq + 0.5) / (doc_freq + 0.5))
