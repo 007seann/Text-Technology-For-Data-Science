@@ -8,9 +8,10 @@ import xml.etree.ElementTree as ET
 
 INDEX_SAVE_PATH = "../database/index/index_base.txt"
 #COLLECTION_PATH = config["collection_path"]
-STOPWORDS = "english_stop_words.txt"
+STOPWORDS = "english_stop_words.txt
 
-# Placeholder files 
+INDEX_SAVE_PATH = config["index_root_dir"]
+COLLCETION_PATH = config["collection_root_dir"]
 
 class XMLDocParser:
     def __init__(self, filename):

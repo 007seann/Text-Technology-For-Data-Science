@@ -1,6 +1,6 @@
 {
     "test_value":23,
-    "index_path":"some_path",
-    "stopword_path":"some_path",
-    "collection_path":"some_path"
+    "index_root_dir":"backend/database/index/",
+    "stopword_path":"None",
+    "collection_root_dir":"exploration/"
 }
