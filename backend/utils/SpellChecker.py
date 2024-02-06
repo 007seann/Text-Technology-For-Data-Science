@@ -1,14 +1,15 @@
 from re import S
 import spacy
-import contextualSpellCheck
+# Too many dependencies. Took too much space. Slow too. 
+#import contextualSpellCheck
 from autocorrect import Speller
 
 class SpellChecker:
-    def __init__(self, language_model='en_core_web_sm', use_secondary=False):
+    def __init__(self, language_model='en_core_web_sm', use_secondary=True):
         self.use_secondary = use_secondary
         if not self.use_secondary:
             self.nlp = spacy.load(language_model, disable=["tagger", "ner"])
-            contextualSpellCheck.add_to_pipe(self.nlp)
+            #contextualSpellCheck.add_to_pipe(self.nlp)
         else:
             self.secondary = Speller()
 

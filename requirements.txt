@@ -14,3 +14,4 @@ faker
 streamlit-searchbox
 wikipedia
 autocorrect
+contextualSpellCheck
