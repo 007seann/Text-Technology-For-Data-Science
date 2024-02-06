@@ -1,27 +1,26 @@
+from re import S
 import spacy
 import contextualSpellCheck
+from autocorrect import Speller
 
 class SpellChecker:
-    def __init__(self, language_model='en_core_web_sm', use_fst=False):
-        self.use_fst = use_fst
-        if not use_fst:
-            self.nlp = spacy.load(language_model)
+    def __init__(self, language_model='en_core_web_sm', use_secondary=False):
+        self.use_secondary = use_secondary
+        if not self.use_secondary:
+            self.nlp = spacy.load(language_model, disable=["tagger", "ner"])
             contextualSpellCheck.add_to_pipe(self.nlp)
         else:
-            self.fst = self.load_fst_model()  # Define this method to load your FST model
-
-    def load_fst_model(self):
-        pass
+            self.secondary = Speller()
 
     def suggest_corrections_fst(self, token):
         # This is just a placeholder. Probably edit distance. May be faster.
         return ["suggestion1", "suggestion2"]
 
     def check_and_correct(self, text):
-        if not self.use_fst:
+        if not self.use_secondary:
             return self.check_and_correct_spacy(text)
         else:
-            return self.check_and_correct_fst(text)
+            return self.secondary(text)
 
     def check_and_correct_spacy(self, text):
         doc = self.nlp(text)
@@ -31,8 +30,6 @@ class SpellChecker:
         correction_made = len(corrections) > 0
         return corrected_text, corrections, correction_made
     
-    def check_and_correct_fst(self, text):
-        pass
     
 if __name__ == '__main__':
     spell_checker = SpellChecker()

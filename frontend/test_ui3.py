@@ -1,13 +1,21 @@
 import json
+import re
+from sympy import use
 import wikipedia
+import random
+import time
+import sys
 import streamlit as st
 import streamlit.components.v1 as components
 from dataclasses import dataclass
 from streamlit_pills import pills
 from streamlit_searchbox import st_searchbox
-
-
 from faker import Faker
+
+sys.path.append('../backend/utils')
+from SpellChecker import SpellChecker
+
+spell_checker = SpellChecker(use_secondary=True) 
 
 fake = Faker()
 
@@ -28,11 +36,17 @@ def generate_fake_results(num_results):
         results.append(SearchResult(title=title, description=description, link=link, image=image))
     return results
 
-def display_search_results(results):
+def display_search_results(results, query, correction=''):
     # Style configuration
     title_color = '#0000EE' 
     font_family = 'Arial' 
     font_size = '16px' 
+    if correction != query:
+        if st.button(f"Did you mean: :blue[**_{correction}_**]?"):
+            results = generate_fake_results(num_results)
+            query = correction
+    st.markdown(f"<span style='font-size: 100%; color: gray'>Showing results for: <span style='color: blue'><b><i>'{query}'</i></b></span></span>", unsafe_allow_html=True)
+    st.caption(f"Found {len(results)} results.")
     for result in results:
 
         st.markdown(f"""
@@ -47,6 +61,7 @@ def display_search_results(results):
             </div>
         </div>
         """, unsafe_allow_html=True)
+    
     
 
 search_wikipedia = lambda searchterm: [searchterm] + wikipedia.search(searchterm) if searchterm else [searchterm]
@@ -129,26 +144,23 @@ if 'query' not in st.session_state:
 if 'selected_pills' not in st.session_state:
     st.session_state['selected_pills'] = []
 
-col1, col2, col3 = st.columns([1,2,1])
-
+col1, col2, col3 = st.columns([1,4,1])
 
 with col1:
-    st.title("Timeline")
+    st.subheader("Timeline")
 
 with col2:
-    st.title("Search Engine")
-    query = st_searchbox(search_wikipedia,key="wiki_searchbox", placeholder="Search..", rerun_on_update=False, clear_on_submit=False) 
-    #query = st.text_input("Enter your search query", key="query")
+    st.subheader("Search")
+    query = st_searchbox(search_wikipedia, placeholder="Search..", clear_on_submit=False, rerun_on_update=True) 
     
-    if st.button("Search") or query:
-        #st.markdown(f"<small style='color: gray'>Showing results for:  **_'{query}'_**</small>", unsafe_allow_html=True)
-        st.markdown(f"<span style='font-size: 100%; color: gray'>Showing results for: <span style='color: blue'><b><i>'{query}'</i></b></span></span>", unsafe_allow_html=True)
-        st.caption(f"Found {len(results)} results.")
-        display_search_results(results)
+    if st.button("Search", use_container_width=True) or query:
+        correction = spell_checker.check_and_correct(query)
+        display_search_results(results, query, correction=correction)
         st.session_state['selected_pills'] = []
 
 with col3:
     st.container()
+    st.subheader("NER")
 
     pill_options = [fake.word() for _ in range(5)] 
     pill_icons = ["🍀", "🎈", "🌈", "🔥", "🌟"] 

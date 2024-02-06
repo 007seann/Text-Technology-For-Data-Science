@@ -13,3 +13,4 @@ streamlit_pills
 faker
 streamlit-searchbox
 wikipedia
+autocorrect
