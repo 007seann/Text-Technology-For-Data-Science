@@ -1,8 +1,10 @@
-import streamlit as st
 import json
+import wikipedia
+import streamlit as st
 import streamlit.components.v1 as components
 from dataclasses import dataclass
 from streamlit_pills import pills
+from streamlit_searchbox import st_searchbox
 
 
 from faker import Faker
@@ -47,6 +49,7 @@ def display_search_results(results):
         """, unsafe_allow_html=True)
     
 
+search_wikipedia = lambda searchterm: [searchterm] + wikipedia.search(searchterm) if searchterm else [searchterm]
 
 # Set page config
 st.set_page_config(page_title="Search Engine with Timeline", layout="wide")
@@ -134,9 +137,13 @@ with col1:
 
 with col2:
     st.title("Search Engine")
-    query = st.text_input("Enter your search query", key="query")
+    query = st_searchbox(search_wikipedia,key="wiki_searchbox", placeholder="Search..", rerun_on_update=False, clear_on_submit=False) 
+    #query = st.text_input("Enter your search query", key="query")
     
     if st.button("Search") or query:
+        #st.markdown(f"<small style='color: gray'>Showing results for:  **_'{query}'_**</small>", unsafe_allow_html=True)
+        st.markdown(f"<span style='font-size: 100%; color: gray'>Showing results for: <span style='color: blue'><b><i>'{query}'</i></b></span></span>", unsafe_allow_html=True)
+        st.caption(f"Found {len(results)} results.")
         display_search_results(results)
         st.session_state['selected_pills'] = []
 
