@@ -4,8 +4,20 @@ import math
 import scipy.sparse as sp
 
 class VectorSpaceModel:
+    """
+    This class performs vector space model calculations.
+    We provide these options:
+        Use stopping (i.e., remove English stop words such as 'and', 'or', and 'but')
+        Use different modes of calculation (i.e., tf-idf, bm25)
+    """
 
     def __init__(self, documents, use_stopping=True, mode='tfidf'):
+        """
+        Initialise the VectorSpaceModel class
+        documents: list[str]    List of documents to perform vector space model calculations on
+        use_stopping: Boolean   If true, remove stop words.
+        mode: str               Mode of calculation (i.e., tf-idf, bm25)
+        """
         self.mode = mode
         self.tokeniser = Tokeniser(use_stopping=use_stopping)
         self.tokenised_documents = [self.tokeniser.tokenise(document) for document in documents]
@@ -179,8 +191,8 @@ if __name__ == '__main__':
         "Is this the first document?",
     ]
     query = "Is this the second document?"
-    vsm = VectorSpaceModel(documents, use_stopping=False, mode='bm25')
+    vsm = VectorSpaceModel(documents, use_stopping=False, mode='tfidf')
     query_vector = vsm.get_query_vector(query)
     similarity = vsm.calculate_vector_similarity(query_vector)
     print(similarity)
-
+    

@@ -31,8 +31,6 @@ class Database2HTML:
     def create_html(self):
         # Create a new html file
         with document(title="News") as doc:
-            with doc.head:
-                link(rel='stylesheet', href='style.css')
             with doc:
                 h1("News")
                 p(self.date)

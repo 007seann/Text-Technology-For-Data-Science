@@ -1,6 +1,6 @@
 from flask import Flask
 import psycopg2 
-from database2html import Database2HTML
+from parsers import Database2HTML
 
 app = Flask(__name__)
 
