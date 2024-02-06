@@ -56,7 +56,7 @@ num_results = 8
 results = generate_fake_results(num_results)
 
 
-with open('/Users/martin/Documents/GitHub/ttds-group-1/frontend/example.json', "r") as f:
+with open('example.json', "r") as f:
     timeline_data = f.read()
 
 
