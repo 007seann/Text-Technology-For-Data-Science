@@ -8,10 +8,10 @@ import xml.etree.ElementTree as ET
 
 INDEX_SAVE_PATH = "../database/index/index_base.txt"
 #COLLECTION_PATH = config["collection_path"]
-STOPWORDS = "english_stop_words.txt
+STOPWORDS = "english_stop_words.txt"
 
-INDEX_SAVE_PATH = config["index_root_dir"]
-COLLCETION_PATH = config["collection_root_dir"]
+# INDEX_SAVE_PATH = config["index_root_dir"]
+# COLLCETION_PATH = config["collection_root_dir"]
 
 class XMLDocParser:
     def __init__(self, filename):
@@ -203,24 +203,38 @@ class PositionalIndex:
             self.vocabulary.add(current_word)
             self.vocabulary_size += 1
             
-    def search_and(self, search_query):
-            tokenised_terms = self.extract_tokens(search_query)
-            if not tokenised_terms:
-                return set()  # Return an empty set if there are no terms
-        
-            # Initialize the result_set with the documents of the first term
-            doc_freq, doc_dict = self.index.get(tokenised_terms[0], (0, {}))
-            result_set = set(doc_dict.keys())
+    def search_and(self, search_query, include_positions=False):
+        tokenised_terms = self.extract_tokens(search_query)
+        if not tokenised_terms:
+            return set()  # Return an empty set if there are no terms
+    
+        # Initialize the result_set with the documents of the first term
+        doc_freq, doc_dict = self.index.get(tokenised_terms[0], (0, {}))
+        document_set, posting_cache = set(doc_dict.keys()), {}
+        posting_cache.update(doc_dict)
 
-            # Intersect the result_set with the documents of the other terms
-            for term in tokenised_terms[1:]:
-                doc_freq, doc_dict = self.index.get(term, (0, {}))
-                result_set.intersection_update(doc_dict.keys())
+        # Intersect the document_set with the documents of the other terms
+        for term in tokenised_terms[1:]:
+            _, doc_dict = self.index.get(term, (0, {}))
+            document_set.intersection_update(doc_dict.keys())
 
-                if not result_set:
-                    return set()  # Early exit if no documents match
-                
-            return result_set
+            term_posting_mapping = {doc_id: posting for doc_id, posting in doc_dict.items()}
+
+            docs_to_remove = set()
+            for doc in document_set:
+                posting_cache[doc] = posting_cache[doc].intersect(term_posting_mapping[doc])
+                if not posting_cache[doc]:
+                    docs_to_remove.add(doc)
+
+            document_set.difference_update(docs_to_remove)
+
+            if not document_set:
+                return set()  # Early exit if no documents match
+            
+        if not include_positions:
+            return document_set
+            
+        return [(doc, posting_cache[doc].toList()) for doc in document_set]
 
     def search_not(self, search_query):
         excluded_set = set()
@@ -346,6 +360,35 @@ class PositionalIndex:
         sorted_document_scores = sorted(document_score_map.items(), key=lambda x: x[1], reverse=True)
         return [(doc, round(score, 4)) for doc, score in sorted_document_scores][:150]
     
+    def _get_docs_and_positions(self, set_a_results, set_b_results, mode):
+        set_a_docs = {doc for doc, _ in set_a_results}
+        set_b_docs = {doc for doc, _ in set_b_results}
+        set_a_postings = {doc: posting for doc, posting in set_a_results if doc in set_a_docs}
+        set_b_postings = {doc: posting for doc, posting in set_b_results if doc in set_b_docs}
+
+        result_dict = []
+
+        # Find the intersection of document IDs
+        common_doc_ids = {}
+        if mode == 'AND':
+            common_doc_ids = set_a_docs.intersection(set_b_docs)
+        elif mode == 'OR':
+            common_doc_ids = set_a_docs.union(set_b_docs)
+        
+        # Iterate through common document IDs
+        for doc_id in common_doc_ids:
+            # Concatenate the positions lists
+            concatenated_positions = []
+            if doc_id in set_a_postings:
+                concatenated_positions += set_a_postings[doc_id]
+            if doc_id in set_b_postings:
+                concatenated_positions += set_b_postings[doc_id]
+            # Update the result dictionary
+            result_dict.append((doc_id, concatenated_positions))
+            
+        # [(doc_id, [pos1, pos2, ...]), ...]
+        return result_dict
+
     def process_query(self, query):
         query = query.strip()
         if ' AND NOT ' in query:
@@ -366,15 +409,17 @@ class PositionalIndex:
             terms = query.split(' AND ', 1)
             set_a_results = self.process_query(terms[0])
             set_b_results = self.process_query(terms[1])
-
-            return set_a_results.intersection(set_b_results)
+            doc_pos_result = self._get_docs_and_positions(set_a_results, set_b_results, 'AND')
+            
+            return doc_pos_result
 
         elif ' OR ' in query:
             terms = query.split(' OR ', 1)
             set_a_results = self.process_query(terms[0])
             set_b_results = self.process_query(terms[1])
+            doc_pos_result = self._get_docs_and_positions(set_a_results, set_b_results, 'OR')
 
-            return set_a_results.union(set_b_results)
+            return doc_pos_result
         
         elif query.startswith('NOT '):
             query = query.replace('NOT ', '')
@@ -395,9 +440,9 @@ class PositionalIndex:
 
         elif '\"' in query:
             phrase = query.replace('"', '')
-            return self.search_phrase(phrase)
+            return self.search_phrase(phrase, include_positions=True)
         else:
-            return self.search_and(query)
+            return self.search_and(query, include_positions=True)
     
 if __name__ == '__main__':
     
@@ -407,6 +452,8 @@ if __name__ == '__main__':
     # Can be disabled once index is generated. 
     xml_parser = XMLDocParser(source_file)
     for doc_text,meta_data in xml_parser.stream_docs():
-
         p.insert_document(doc_text, meta_data)
-    p.save_index()
+
+    result = p.process_query("Europe OR commission")
+    print(result)
+    # p.save_index()
