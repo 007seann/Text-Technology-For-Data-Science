@@ -9,3 +9,5 @@ streamlit-keyup
 streamlit-timeline
 spacy
 postgres
+streamlit_pills
+faker
