@@ -31,7 +31,6 @@ def display_search_results(results):
     title_color = '#0000EE' 
     font_family = 'Arial' 
     font_size = '16px' 
-
     for result in results:
 
         st.markdown(f"""
@@ -46,6 +45,7 @@ def display_search_results(results):
             </div>
         </div>
         """, unsafe_allow_html=True)
+    
 
 
 # Set page config
@@ -101,11 +101,11 @@ def timeline(data, height=800):
     htmlcode = css_block + ''' 
     ''' + js_block + '''
 
-        <div id='timeline-embed' style="width: 95%; width: 200px; height: '''+str(height)+'''px; margin: 1px;"></div>
+        <div id='timeline-embed' style="width: 95%; height: '''+str(height)+'''px; margin: 1px;"></div>
 
         <script type="text/javascript">
             var additionalOptions = {
-                start_at_end: false, is_embed:true,
+                start_at_end: false, is_embed:false,
             }
             '''+source_block+'''
             timeline = new TL.Timeline('timeline-embed', '''+source_param+''', additionalOptions);
@@ -113,12 +113,11 @@ def timeline(data, height=800):
 
 
     # return rendered html
-    static_component = components.html(htmlcode, height=height,)
+    static_component = components.html(htmlcode, height=height)
 
     return static_component
 
-
-
+timeline(timeline_data, height=320)
 
 # Initialize query in session state
 if 'query' not in st.session_state:
@@ -127,14 +126,11 @@ if 'query' not in st.session_state:
 if 'selected_pills' not in st.session_state:
     st.session_state['selected_pills'] = []
 
-timeline(timeline_data, height=800)
-
 col1, col2, col3 = st.columns([1,2,1])
 
 
-
 with col1:
-    timeline(timeline_data, height=800)
+    st.title("Timeline")
 
 with col2:
     st.title("Search Engine")
