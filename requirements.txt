@@ -1,0 +1,11 @@
+flask
+requests
+numpy
+pandas
+Django
+streamlit
+streamlit-faker 
+streamlit-keyup
+streamlit-timeline
+spacy
+postgres
