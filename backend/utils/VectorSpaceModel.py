@@ -1,6 +1,8 @@
 import numpy as np
-from Tokeniser import Tokeniser
 import math
+import sys
+sys.path.append('../')
+from indexer.Tokeniser import Tokeniser
 import scipy.sparse as sp
 
 class VectorSpaceModel:
@@ -10,7 +12,6 @@ class VectorSpaceModel:
         Use stopping (i.e., remove English stop words such as 'and', 'or', and 'but')
         Use different modes of calculation (i.e., tf-idf, bm25)
     """
-
     def __init__(self, documents, use_stopping=True, mode='tfidf'):
         """
         Initialise the VectorSpaceModel class
@@ -181,7 +182,7 @@ class VectorSpaceModel:
         similarity = {}
         for doc_id in range(self.N):
             similarity[doc_id] = np.dot(self.score_matrix[doc_id].toarray(), query_vector.toarray())[0][0]
-        return similarity
+        return sorted(similarity.items(), key=lambda x: x[1], reverse=True)
 
 if __name__ == '__main__':
     documents = [
@@ -191,8 +192,7 @@ if __name__ == '__main__':
         "Is this the first document?",
     ]
     query = "Is this the second document?"
-    vsm = VectorSpaceModel(documents, use_stopping=False, mode='tfidf')
+    vsm = VectorSpaceModel(documents, use_stopping=False, mode='bm25')
     query_vector = vsm.get_query_vector(query)
     similarity = vsm.calculate_vector_similarity(query_vector)
     print(similarity)
-    
