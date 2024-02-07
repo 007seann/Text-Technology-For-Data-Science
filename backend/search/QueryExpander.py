@@ -15,11 +15,12 @@ class QueryExpander:
         prf - Expands the query with PRF (Pseudo Relevance Feedback)
         bert - Expands the query with BERT. TODO
     """
-    def __init__(self):
+    def __init__(self, vsm):
         """
         Initialises the Query Expander.
         """
         self.nlp = spacy.load("en_core_web_sm")
+        self.vsm = vsm
 
     def expand(self, query, mode="prf"):
         """
@@ -31,9 +32,14 @@ class QueryExpander:
             "syn": self._syn_expand,
             "prf": self._prf_expand
         }
+        if mode == "prf":
+            query_vector = self.vsm.get_query_vector(query)
+            print("Old query: ", [x for y in query_vector.toarray().tolist() for x in y])
+            returned_vectors = self.vsm.calculate_vector_similarity(query_vector)
+            return case[mode](query_vector, returned_vectors)
         return case[mode](query)
         
-    def _syn_expand(self, query_tokens, words_to_replace=1):
+    def _syn_expand(self, query_tokens, words_to_replace=3):
         """
         Expands a query with synonyms.
         :param query: The query to be expanded.
@@ -44,6 +50,7 @@ class QueryExpander:
         tokens_to_replace = random.sample(token_pos, words_to_replace)
         print("Old query: {}".format(query_tokens))
         for token, pos in tokens_to_replace:
+            synsets = []
             if pos == "NOUN":
                 synsets = wn.synsets(token.text, pos=wn.NOUN)
             elif pos == "VERB":
@@ -52,8 +59,6 @@ class QueryExpander:
                 synsets = wn.synsets(token.text, pos=wn.ADJ)
             elif pos == "ADV":
                 synsets = wn.synsets(token.text, pos=wn.ADV)
-            else:
-                synsets = []
             if synsets:
                 different_words = [synset for synset in synsets if synset.lemmas()[0].name() != token.text]
                 synset = random.choice(different_words)
@@ -61,32 +66,35 @@ class QueryExpander:
         print("New query: {}".format(query_tokens))
         return query_tokens
 
-    def _get_centroid(self, doc_vectors):
+    def _get_centroid(self, doc_vectors_tuple, top_k):
         """
         Calculates the centroid of a list of document vectors.
         :param doc_vectors: The list of document vectors.
         :return: The centroid of the document vectors.
         """
-        centroid = [0 for _ in range(len(doc_vectors[0]))]
-        for doc_vector in doc_vectors:
-            top_k_terms = self._get_top_k_terms_in_vector(doc_vector)
-            for i, score in top_k_terms:
-                centroid[i] += score
-        centroid /= len(doc_vectors)
+        centroid = [0 for _ in range(len(doc_vectors_tuple))]
+        for doc_vector in doc_vectors_tuple:
+            doc_id, _ = doc_vector
+            doc_vector = self.vsm.score_matrix[doc_id]
+            # top_k_terms = self._get_top_k_terms_in_vector(doc_vector, k=top_k)
+            dense_vector = [x for y in doc_vector.toarray().tolist() for x in y]
+            centroid = [centroid[i] + dense_vector[i] for i in range(len(doc_vectors_tuple))]
+        centroid = [score / len(doc_vectors_tuple) for score in centroid]
         return centroid
     
-    def _get_top_k_terms_in_vector(self, vector, k=5):
+    def _get_top_k_terms_in_vector(self, vector, k):
         """
         Returns the top k terms in a vector.
         :param vector: The vector.
         :param k: The number of terms to return. (Default: 5)
         :return: The top k terms in the vector.
         """
-        enumerated_vector = list(enumerate(vector))
-        sorted_vector = sorted(enumerated_vector, key=lambda x: x[1], reverse=True)
+        doc_id, _ = vector
+        doc_vector = self.vsm.score_matrix[doc_id]
+        sorted_vector = sorted(doc_vector, key=lambda x: x, reverse=True)
         return sorted_vector[:k]
 
-    def _prf_expand(self, query_vector, returned_vectors, top_k=5, top_n=10, bottom_k=5, alpha=1, beta=1, gamma=0):
+    def _prf_expand(self, query_vector, returned_vectors, top_k=1, top_n=10, bottom_k=5, alpha=1, beta=1, gamma=0):
         """
         Expands a query with pseudo relevance feedback.
         :param query_vector: The query to be expanded.
@@ -101,18 +109,19 @@ class QueryExpander:
         :return: The expanded query.
         """
         relevant_doc_vectors = returned_vectors[:top_k]
-        if gamma == 0:
-            irrelevant_doc_vectors = []
-        else:
+        dense_query_vector = [x for y in query_vector.toarray().tolist() for x in y]
+        augmented_query_vector = alpha * dense_query_vector + beta * self._get_centroid(relevant_doc_vectors, top_k)
+        if gamma:
             irrelevant_doc_vectors = returned_vectors[-bottom_k:]
-        augmented_query_vector = alpha * query_vector + beta * self._get_centroid(relevant_doc_vectors) - gamma * self._get_centroid(irrelevant_doc_vectors)
+            augmented_query_vector += gamma * self._get_centroid(irrelevant_doc_vectors, bottom_k)
         return augmented_query_vector
 
 
 if __name__ == "__main__":
-    documents = ["I want to buy a car", "I want to buy a bike", "I want to buy a truck"]
-    query = ["I", "want", "to", "buy", "a", "vehicle"]
-    query_expander = QueryExpander()
+    documents = ["I want to buy a car", "This is a random document", "I crave a truck"]
+    # query = ["I", "want", "to", "buy", "a", "vehicle"]
+    query = "I want to buy a vehicle"
     vsm = VectorSpaceModel(documents, use_stopping=False, mode='bm25')
-    # query_vector = vsm.get_query_vector(query)
-    query_expander.expand(query, mode="syn")
+    query_expander = QueryExpander(vsm)
+    expanded_query = query_expander.expand(query, mode="prf")
+    print("New query: ", expanded_query)
