@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>search</title>
+    <link href = "static/style.css" rel = "stylesheet" type = "text/css">
+
+</head>
+<body>
+    <div class="header">
+        <div class = "search_header">
+            <img src="static/rev_crop.svg" alt="Logo" class="svg-image">
+            <form method="post" action="{{ url_for('process_button') }}">
+                <input type = "text" name = query placeholder = "&#x270e; Search for News ..." value="{{ query }}">              
+                <button type = "submit" name="timeline">TIMELINE</button>
+                <button type = "submit" name = "news">NEWS</button>
+            </form>
+        </div>
+        <div class = "search_page">
+            <pre> 
+            </pre>
+            <p><i>Search results for : </i> <b>{{ query }}</b></p> 
+        </div>
+    
+        <div class = "timeline">
+            <div class="article">
+                <div class="article-content">
+                    <h3>Article 1</h3>
+                    <p>Description 1</p>
+                    <pre>
+        
+                    </pre>
+                </div>
+            </div>
+            <div class="article">
+                <div class="article-content">
+                    <h3>Article 2</h3>
+                    <p>Description 2</p>
+                    <pre>
+        
+                    </pre>
+                </div>
+            </div>
+            <div class="article">
+                <div class="article-content">
+                    <h3>Article 3</h3>
+                    <p>Description 3</p>
+                    <pre>
+        
+                    </pre>
+                </div>
+            </div>
+            <div class="article">
+                <div class="article-content">
+                    <h3>Article 4</h3>
+                    <p>Description 4</p>
+                    <pre>
+        
+                    </pre>
+                </div>
+            </div>
+            <div class="article">
+                <div class="article-content">
+                    <h3>Article 5</h3>
+                    <p>Description 5</p>
+                    <pre>
+                        
+                    </pre>
+                </div>
+            </div>
+            <div class="article">
+                <div class="article-content">
+                    <h3>Article 6</h3>
+                    <p>Description 6</p>
+                    <pre>
+                        
+                    </pre>
+                </div>
+            </div>
+            <div class="article">
+                <div class="article-content">
+                    <h3>Article 7</h3>
+                    <p>Description 7</p>
+                    <pre>
+                        
+                    </pre>
+                </div>
+            </div>
+            <div class="article">
+                <div class="article-content">
+                    <h3>Article 8</h3>
+                    <p>Description 8</p>
+                    <pre>
+                        
+                    </pre>
+                </div>
+            </div>
+        </div>
+            
+    </div>
+    
+    
+                
+
+
+
+    
+
+    
+    
+
+
+
+</body>
+</html>
