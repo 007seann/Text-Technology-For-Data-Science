@@ -55,7 +55,6 @@ def display_search_results(metadata, query, correction=''):
     font_size = '16px' 
     if correction != query:
         if st.button(f"Did you mean: :blue[**_{correction}_**]?"):
-            # results = make_results(metadata)
             query = correction
     st.markdown(f"<span style='font-size: 100%; color: gray'>Showing results for: <span style='color: blue'><b><i>'{query}'</i></b></span></span>", unsafe_allow_html=True)
     results = make_results(metadata)
@@ -167,7 +166,7 @@ with col2:
         returned_docs = indexer.process_query(correction)
         metadata = []
         for doc_id, positions in returned_docs:
-            article = get_news(1)
+            article = get_news(1) # Change '1' to doc_id when index is synced with db
             all_tags = article.find_all('p')
             date = all_tags[0].text
             title = all_tags[1].text
