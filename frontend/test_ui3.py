@@ -11,13 +11,21 @@ from dataclasses import dataclass
 from streamlit_pills import pills
 from streamlit_searchbox import st_searchbox
 from faker import Faker
+import requests
+from bs4 import BeautifulSoup
 
 sys.path.append('../backend/utils')
+sys.path.append('../backend/indexer')
+
+from PositionalIndex import PositionalIndex
 from SpellChecker import SpellChecker
 
-spell_checker = SpellChecker(use_secondary=True) 
-
 fake = Faker()
+
+# Load indexer
+indexer = PositionalIndex()
+indexer.load_index('../backend/database/index/index_base.txt')
+spell_checker = SpellChecker(use_secondary=True) 
 
 @dataclass
 class SearchResult:
@@ -25,30 +33,34 @@ class SearchResult:
     description: str
     link: str
     image: str  # Image URL
+    
+def get_news(doc_id):
+    url = "http://ttds.martinnn.com:5002/api/news/{}".format(doc_id)
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    return soup
 
-def generate_fake_results(num_results):
+def make_results(metadata):
     results = []
-    for _ in range(num_results):
-        title = fake.sentence(nb_words=6)
-        description = fake.text(max_nb_chars=200)
+    for date, title in metadata:
         link = fake.url()
         image = fake.image_url(width=50, height=50)  
-        results.append(SearchResult(title=title, description=description, link=link, image=image))
+        results.append(SearchResult(title=title, description=date, link=link, image=image))
     return results
 
-def display_search_results(results, query, correction=''):
+def display_search_results(metadata, query, correction=''):
     # Style configuration
     title_color = '#0000EE' 
     font_family = 'Arial' 
     font_size = '16px' 
     if correction != query:
         if st.button(f"Did you mean: :blue[**_{correction}_**]?"):
-            results = generate_fake_results(num_results)
             query = correction
     st.markdown(f"<span style='font-size: 100%; color: gray'>Showing results for: <span style='color: blue'><b><i>'{query}'</i></b></span></span>", unsafe_allow_html=True)
+    results = make_results(metadata)
     st.caption(f"Found {len(results)} results.")
     for result in results:
-
+        print(result)
         st.markdown(f"""
         <div style="display: flex; align-items: center; padding: 10px; margin: 10px 0; border-radius: 10px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);">
             <img src="{result.image}" alt="{result.title}" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 10px;">
@@ -68,10 +80,6 @@ search_wikipedia = lambda searchterm: [searchterm] + wikipedia.search(searchterm
 
 # Set page config
 st.set_page_config(page_title="Search Engine with Timeline", layout="wide")
-
-num_results = 8
-
-results = generate_fake_results(num_results)
 
 
 with open('example.json', "r") as f:
@@ -155,7 +163,16 @@ with col2:
     
     if st.button("Search", use_container_width=True) or query:
         correction = spell_checker.check_and_correct(query)
-        display_search_results(results, query, correction=correction)
+        returned_docs = indexer.process_query(correction)
+        metadata = []
+        for doc_id, positions in returned_docs:
+            article = get_news(1) # Change '1' to doc_id when index is synced with db
+            all_tags = article.find_all('p')
+            date = all_tags[0].text
+            title = all_tags[1].text
+            content = all_tags[2].text # Need to add this later
+            metadata.append((date, title))
+        display_search_results(metadata, query, correction=correction)
         st.session_state['selected_pills'] = []
 
 with col3:
