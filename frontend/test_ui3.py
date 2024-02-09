@@ -166,13 +166,12 @@ with col2:
         correction = spell_checker.check_and_correct(query)
         returned_docs = indexer.process_query(correction)
         metadata = []
-        for doc_positions in returned_docs:
-            doc_id, positions = doc_positions
+        for doc_id, positions in returned_docs:
             article = get_news(1)
             all_tags = article.find_all('p')
             date = all_tags[0].text
             title = all_tags[1].text
-            content = all_tags[2].text
+            content = all_tags[2].text # Need to add this later
             metadata.append((date, title))
         display_search_results(metadata, query, correction=correction)
         st.session_state['selected_pills'] = []
