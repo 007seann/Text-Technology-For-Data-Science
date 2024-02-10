@@ -18,6 +18,7 @@ class SearchRetriever:
         publisher: str
         sentiment: float
         bold_token: int
+        content: str
 
     def __init__(self):
         self.index = PositionalIndex()
@@ -51,7 +52,8 @@ class SearchRetriever:
                                     date=date,
                                     publisher="Publisher",
                                     sentiment=0.0, # TODO
-                                    bold_token=int(bold_token))
+                                    bold_token=int(bold_token),
+                                    content=content)
             result_cards.append(card)
         return result_cards
 
