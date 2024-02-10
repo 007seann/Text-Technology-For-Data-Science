@@ -31,11 +31,17 @@ class Database2HTML:
     def create_html(self):
         # Create a new html file
         with document(title="News") as doc:
+            with doc.head:
+                link(rel='stylesheet', href='styling/news_style.css')
             with doc:
-                h1("News")
-                p(self.date)
-                p(self.title)
-                p(self.article)
+                with div(style="display: flex; justify-content: center; width: 100%"):
+                    with div(style="display: inline-block; max-width: 60%") :
+                        h1(self.title , id = "title")
+                        sub(f"Published {self.date}", id = "date")
+                        
+                        with div(id = "article"):
+                            for i in self.article.split("\n"):
+                                p(i)
 
         return doc.render()
     
