@@ -25,15 +25,10 @@ def search_result():
 
 @app.route('/search', methods=['POST'])
 def process_button():
-    if 'timeline' in request.form:
+    if 'search' in request.form:
         query = request.form['query']
         return render_template('search_result.html', query = query)
     
-    elif 'news' in request.form:
-        return render_template('team.html')
-    
-   
-
 if __name__ == '__main__':
     #app.run(debug=True)
     app.run(host='192.168.0.48', port=5000, debug=True, threaded=False)
