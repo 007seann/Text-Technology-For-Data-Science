@@ -7,7 +7,7 @@ def save_html():
     curr.execute(max_id_sql)
     doc_ids = curr.fetchall()
     
-    for id in doc_ids[:3]:
+    for id in doc_ids:
         id = id[0]
 
 
