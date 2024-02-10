@@ -23,7 +23,7 @@ class SearchRetriever:
         self.index.load_index('../backend/database/index/index_base.txt')
         self.faker = Faker()
 
-    def get_news(doc_id):
+    def _get_news(doc_id):
         url = "http://ttds.martinnn.com:5002/api/news/{}".format(doc_id)
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -36,11 +36,16 @@ class SearchRetriever:
     def get_results(self, query):
         result_cards = []
         doc_positions_list = self._search(query)
-        for doc_id, positions in doc_positions_list:
-            card = self.ResultCard(title="Title",
+        returned_news = [(self._get_news(doc_id), positions) for doc_id, positions in doc_positions_list]
+        for raw_html in returned_news:
+            all_tags = raw_html.find_all('p') # Will be changed when the HTML format is fixed
+            date = all_tags[0].text
+            title = all_tags[1].text
+            content = all_tags[2].text # TODO Need to be processed into publisher/text
+            card = self.ResultCard(title=title,
                                     url=self.faker.url(),
                                     image=self.faker.image_url(width=50, height=50),
-                                    date="Date", 
+                                    date=date,
                                     publisher="Publisher",
                                     sentiment=0.0,
                                     bold_token=0)

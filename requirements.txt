@@ -15,3 +15,5 @@ streamlit-searchbox
 wikipedia
 autocorrect
 contextualSpellCheck
+BeautifulSoup
+requests
