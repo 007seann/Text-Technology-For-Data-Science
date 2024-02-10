@@ -1,4 +1,7 @@
 from flask import Flask, render_template, request
+import sys
+sys.path.append('../backend/search')
+from backend.search.SearchRetriever import SearchRetriever
 
 app = Flask(__name__)
 
@@ -31,4 +34,5 @@ def process_button():
     
 if __name__ == '__main__':
     #app.run(debug=True)
+    search_retriever = SearchRetriever()
     app.run(host='192.168.0.48', port=5000, debug=True, threaded=False)
