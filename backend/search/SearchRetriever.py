@@ -1,9 +1,10 @@
 import sys
+sys.path.append('../backend')
 sys.path.append('../backend/indexer')
 from indexer.PositionalIndex import PositionalIndex
 from faker import Faker
 import requests
-import BeautifulSoup
+from bs4 import BeautifulSoup
 from dataclasses import dataclass
 import random
 

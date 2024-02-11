@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request
 import sys
-sys.path.append('../backend/search')
+sys.path.append('../')
 from backend.search.SearchRetriever import SearchRetriever
 
 app = Flask(__name__)
