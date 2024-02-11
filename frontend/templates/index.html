@@ -4,7 +4,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title> News Search Engine </title>
     <link href = "static/style.css" rel = "stylesheet" type = "text/css">
-
+    <script>
+        function validateForm() {
+            var query = document.forms["searchForm"]["query"].value;
+            if (query == "") {
+                alert("Please enter a search query");
+                return false;
+            }
+        }
+    </script>
      
 </head>
 <body>
@@ -23,9 +31,8 @@
         </video> 
     </div>
     <div class = "content">    
-        <form method="post" action="{{ url_for('search_result') }}">
-            <input type = "text" placeholder = "&#x270e; Search for News ...">
-            
+        <form name= "searchForm" method="post" action="{{ url_for('search') }}" onsubmit = "return validateForm()">
+            <input type = "text" name = "query" placeholder = "&#x270e; Search for News ...">    
             <button type = "submit">SEARCH</button>
             
         </form>
