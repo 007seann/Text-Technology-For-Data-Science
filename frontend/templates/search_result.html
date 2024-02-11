@@ -10,20 +10,35 @@
     <div class="header">
         <div class = "search_header">
             <img src="static/rev_crop.svg" alt="Logo" class="svg-image">
-            <form method="post" action="{{ url_for('process_button') }}">
+            <form method="post" action="{{ url_for('search') }}">
                 <input type = "text" name = query placeholder = "&#x270e; Search for News ..." value="{{ query }}">              
                 <button type = "submit" name="search">SEARCH</button>
-               
             </form>
         </div>
         <div class = "search_page">
             <pre> 
             </pre>
             <p><i>Search results for : </i> <b>{{ query }}</b></p> 
+            <div>
+                {% for card in result_cards %}
+                    <div>
+                        <h2>{{ card.title }}</h2>
+                        <p>Date: {{ card.date }}</p>
+                        <p>Publisher: {{ card.publisher }}</p>
+                        <p>Content: {{ card.content }}</p>
+                        <!-- Add more fields as needed -->
+                    </div>
+                {% endfor %}
+            </div>
         </div>
+        
+
+
+
+
+
     
     </div>
-    
     
 
 </body>
