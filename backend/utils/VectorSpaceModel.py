@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import sys
-sys.path.append('../')
+sys.path.append('./backend')
 from indexer.Tokeniser import Tokeniser
 import scipy.sparse as sp
 

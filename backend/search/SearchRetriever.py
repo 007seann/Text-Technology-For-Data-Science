@@ -1,9 +1,9 @@
 import sys
-sys.path.append('../backend/indexer')
-from indexer.PositionalIndex import PositionalIndex
+sys.path.append("./backend/indexer")
+from backend.indexer.PositionalIndex import PositionalIndex
 from faker import Faker
 import requests
-import BeautifulSoup
+from bs4 import BeautifulSoup
 from dataclasses import dataclass
 import random
 
@@ -22,7 +22,7 @@ class SearchRetriever:
 
     def __init__(self):
         self.index = PositionalIndex()
-        self.index.load_index('../backend/database/index/index_base.txt')
+        self.index.load_index('./backend/database/index/index_base.txt')
         self.faker = Faker()
 
     def _get_news(doc_id):
