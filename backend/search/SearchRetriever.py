@@ -25,12 +25,8 @@ class SearchRetriever:
         self.index.load_index('./backend/database/index/index_base.txt')
         self.faker = Faker()
 
-    def _get_news(self,doc_id):
-        
-        url = "http://ttds.martinnn.com:5002/api/news/{}".format(doc_id)
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        return soup
+    def _get_news(self, doc_id):
+        pass
     
     def _search(self, query):
         doc_positions_list = self.index.process_query(query)
@@ -38,22 +34,23 @@ class SearchRetriever:
     
     def get_results(self, query):
         result_cards = []
-        doc_positions_list = self._search(query)
-        returned_news = [(self._get_news(1), positions) for doc_id, positions in doc_positions_list]
-        for raw_html, positions in returned_news:
-            all_tags = raw_html.find_all('p') # Will be changed when the HTML format is fixed
-            date = all_tags[0].text
-            title = 'Test Tittle' #all_tags[1].text
-            content = 'Hi this is the test content manually entered'#all_tags[2].text #Need to be processed into publisher/text
-            bold_token = random.choice(positions)
-            # bold_token = positions[0] # If we don't want to make it random 
+        # doc_positions_list = self._search(query)
+        # returned_news = [(self._get_news(1), positions) for doc_id, positions in doc_positions_list]
+        # for raw_html, positions in returned_news:
+        num_results = 5
+        for _ in range(num_results):
+            date = self.faker.date()
+            title = self.faker.sentence()
+            publisher = self.faker.name()
+            content = " ".join(self.faker.paragraphs(2))
+            bold_token = 0
             card = self.ResultCard(title=title,
                                     url=self.faker.url(),
                                     image=self.faker.image_url(width=50, height=50),
                                     date=date,
-                                    publisher="Publisher",
+                                    publisher=publisher,
                                     sentiment=0.0, # TODO
-                                    bold_token=int(bold_token),
+                                    bold_token=bold_token,
                                     content=content)
             result_cards.append(card)
         return result_cards
