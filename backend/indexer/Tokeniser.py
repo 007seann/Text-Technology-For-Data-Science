@@ -87,9 +87,3 @@ class Tokeniser:
         for word in self.ner(sentence).ents:
             entities.append((word.text, word.label_))
         return source, date, entities
-
-
-if __name__ == '__main__':
-    print("this is wrking")
-    t = Tokeniser()
-    print(t.get_stop_words())
