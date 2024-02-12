@@ -15,28 +15,42 @@
                 <button type = "submit" name="search">SEARCH</button>
             </form>
         </div>
+        <div class = "result_header">
+        {% if result_cards %}
+        <p><i>Search results for : </i> <b>{{ query }}</b></p>
+        </div> 
         <div class = "search_page">
-            <pre> 
-            </pre>
-            <div>
-                {% if result_cards %}
-                <p><i>Search results for : </i> <b>{{ query }}</b></p> 
-                    {% for card in result_cards %}
-                        <div>
-                            <h2>{{ card.title }}</h2>
-                            <p>Date: {{ card.date }}</p>
-                            <p>Publisher: {{ card.publisher }}</p>
-                            <p>Content: {{ card.content }}</p>
-                       
-                        </div>
-                    {% endfor %}
-
-                {% else %}
-                    <div>
-                        <p><i>No results found for : </i><b>{{ query }}</b></p>
-                    </div>
-                {% endif %}   
+            <div class="timeline">
+                <!-- Content for the first column -->
+                <h3>Timeline</h3>
+                <p>qwerty asdf zxcvb</p>
             </div>
+            <div class = "articles">
+                {% for card in result_cards %}
+                    <div class = "result_card">
+                        <img src="{{ card.image }}" alt="Image">
+                        <div>
+                            <h3>{{ card.title }}</h3>
+                            <p>{{ card.date }}</p>
+                            <p>{{ card.publisher }}</p>
+                            <p><a href="{{ card.url }}">{{ card.url }}</a></p>
+                            <p>{{ card.content }}</p>
+                        </div>                                                   
+                    </div>
+                {% endfor %}
+            </div>
+            <div class = "col3">
+                <!-- Content for the third column -->
+                <h3>Column 3</h3>
+                <p>qwerty asdfg zxcv</p>
+            </div>
+
+            {% else %}
+                <div>
+                    <p align="Center"><i>No results found for : </i><b>{{ query }}</b></p>
+                </div>
+            {% endif %}   
+            
         </div>
     </div>
     
