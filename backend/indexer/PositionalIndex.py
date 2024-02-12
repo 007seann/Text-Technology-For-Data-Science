@@ -1,17 +1,15 @@
 from PostingLinkedList import PostingLinkedList
 from Tokeniser import Tokeniser
-import time
+from Crawler import Crawler
 import math
 from nltk.stem import PorterStemmer
 import os
 import xml.etree.ElementTree as ET
 
 INDEX_SAVE_PATH = "../database/index/index_base.txt"
-#COLLECTION_PATH = config["collection_path"]
+CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
+INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), 'crawltest')
 STOPWORDS = "english_stop_words.txt"
-
-# INDEX_SAVE_PATH = config["index_root_dir"]
-# COLLCETION_PATH = config["collection_root_dir"]
 
 class XMLDocParser:
     def __init__(self, filename):
@@ -47,37 +45,85 @@ class PositionalIndex:
         # Stemming and Tokenisation utils
         self.stemmer = PorterStemmer() # TODO
         self.tokeniser = Tokeniser() #TODO
+        self.crawler = Crawler(INDEX_BASE_DIR, CRAWL_CACHE_PATH)
         
         self.enable_stemming = False
         # In memory data
+        self.document_id_mapping = {} # We use this map
         self.index = {}
         self.document_ids = set()
         self.vocabulary = set()
         self.vocabulary_size = 0
         self.headline_index = {}
+        
+    def build_index(self):
+        """
+        Builds the positional index by crawling the web pages, extracting documents, and inserting them into the index.
+
+        Raises:
+            Exception: If no files are found in the base directories.
+
+        """
+        self.crawler.crawl(rebuild=True)
+        cache = self.crawler.cache
+        if not cache:
+            raise Exception("No files found in the base directories.")
+        for file_path, checksum in cache.items():
+            if file_path not in self.document_id_mapping:
+                self.document_id_mapping[file_path] = len(self.document_id_mapping)
+                document_dict = self.crawler.html_to_dict(file_path, self.document_id_mapping[file_path])
+                self.insert_document(document_dict)
+    
+    def reload_index(self):
+        """
+        Reloads the index by crawling new pages, updating the document ID mapping,
+        and inserting the documents into the index.
+
+        This method performs the following steps:
+        1. Calls the `crawl` method of the crawler object to crawl new pages.
+        2. Retrieves the paths of the new pages using the `get_new_files` method of the crawler object.
+        3. Updates the document ID mapping by assigning a unique ID to each new page.
+        4. Converts the HTML content of each new page to a dictionary representation using the `html_to_dict` method of the crawler object.
+        5. Inserts the document into the index using the `insert_document` method.
+
+        Note: This method assumes that the `crawler` object and the `document_id_mapping` dictionary are already initialized.
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        """
+        self.crawler.crawl(rebuild=False)
+        new_pages = self.crawler.get_new_files(clear_queue=True)
+        for file_path in new_pages:
+            self.document_id_mapping[file_path] = len(self.document_id_mapping)
+            document_dict = self.crawler.html_to_dict(file_path, self.document_id_mapping[file_path])            
+            self.insert_document(document_dict)
+        
     
     # Will take an XML parsed doc. 
-    def insert_document(self, document_text, document_metadata, include_subsections=False):
-        doc_id = document_metadata.get("DOCNO")
-
+    def insert_document(self, document_dict, include_subsections=False):
+        doc_id = document_dict.get("DOCNO")
+        print("document  ", doc_id)
+        print(self.document_ids)
         # Document has already been added. 
         if doc_id in self.document_ids:
             return
         
         # We collapse document into two sections
-        merged_text = document_metadata.get("HEADLINE", "") + " " + document_text.get("TEXT", "")
-        headline = document_metadata.get('HEADLINE', "")
+        merged_text = document_dict.get("HEADLINE", "") + " " + document_dict.get("TEXT", "")
+        headline = document_dict.get('HEADLINE', "")
         # Used if we need do to read any other subsections
         if include_subsections:
             for tag in ["PROFILE", "DATE", "BYLINE", "DATELINE", "PUB", "PAGE"]:
-                merged_text += document_metadata.get(tag, "")
+                merged_text += document_dict.get(tag, "")
 
         ## Building Extent Index. { (headline) : {docId: spans} }, where a headline of an article is stemmed and does not include stopwords as well as an article.
         headline_token_stream = self.tokeniser.tokenise(headline)
         token_stream = self.tokeniser.tokenise(merged_text)
         
-        with open(file = STOPWORDS, mode= 'r') as f:
-            stopwords = set(f.read().split())
+        stopwords = self.tokeniser.get_stop_words()
 
         token_stream_without_stopwords = [token for token in token_stream if token not in stopwords]
         stemmed_tokens = []
@@ -447,13 +493,5 @@ class PositionalIndex:
 if __name__ == '__main__':
     
     p = PositionalIndex()
-    source_file = "../../exploration/selected_news_articles.xml"
-    
-    # Can be disabled once index is generated. 
-    xml_parser = XMLDocParser(source_file)
-    for doc_text,meta_data in xml_parser.stream_docs():
-        p.insert_document(doc_text, meta_data)
-
-    result = p.process_query("Europe OR commission")
-    print(result)
-    # p.save_index()
+    # Call build method like below, to build the index from scratch.
+    #p.build_index()

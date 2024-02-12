@@ -17,3 +17,4 @@ autocorrect
 contextualSpellCheck
 BeautifulSoup
 requests
+beautifulsoup4

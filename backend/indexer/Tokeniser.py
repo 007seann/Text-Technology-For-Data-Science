@@ -2,7 +2,9 @@ import nltk
 import regex as re
 import string
 import spacy
+import os
 
+STOPWORDS_PATH = os.path.join(os.path.dirname(__file__), '../utils/english_stop_words.txt')
 class Tokeniser:
     """
     This class performs tokenisations of sentences.
@@ -20,13 +22,17 @@ class Tokeniser:
         """
         self.use_stopping = use_stopping
         self.punctuations_to_keep = punctuations_to_keep
-        if self.use_stopping:
-            self.stop_words = self._read_stop_words()
+        self.stop_words = self.get_stop_words() if self.use_stopping else None
         self.stemmer = nltk.PorterStemmer()
         self.ner = spacy.load('en_core_web_sm')
+        
+    def get_stop_words(self):
+        if not self.stop_words:
+            self.stop_words = self._read_stop_words()
+        return self.stop_words
 
     def _read_stop_words(self):
-        with open('english_stop_words.txt', 'r') as f:
+        with open(STOPWORDS_PATH, 'r') as f:
             stop_words = set(f.read().split("\n"))
         return stop_words
 
@@ -81,3 +87,9 @@ class Tokeniser:
         for word in self.ner(sentence).ents:
             entities.append((word.text, word.label_))
         return source, date, entities
+
+
+if __name__ == '__main__':
+    print("this is wrking")
+    t = Tokeniser()
+    print(t.get_stop_words())

@@ -158,3 +158,10 @@ if __name__ == "__main__":
     for word in wordindex.traverse_words():
         print(word)
     wordindex.visualize_word_index()
+
+
+
+index trie
+
+
+insert(word, doc_id, ll)
