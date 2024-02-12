@@ -25,7 +25,8 @@ class SearchRetriever:
         self.index.load_index('./backend/database/index/index_base.txt')
         self.faker = Faker()
 
-    def _get_news(doc_id):
+    def _get_news(self,doc_id):
+        
         url = "http://ttds.martinnn.com:5002/api/news/{}".format(doc_id)
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -38,12 +39,12 @@ class SearchRetriever:
     def get_results(self, query):
         result_cards = []
         doc_positions_list = self._search(query)
-        returned_news = [(self._get_news(doc_id), positions) for doc_id, positions in doc_positions_list]
+        returned_news = [(self._get_news(1), positions) for doc_id, positions in doc_positions_list]
         for raw_html, positions in returned_news:
             all_tags = raw_html.find_all('p') # Will be changed when the HTML format is fixed
             date = all_tags[0].text
-            title = all_tags[1].text
-            content = all_tags[2].text # TODO Need to be processed into publisher/text
+            title = 'Test Tittle' #all_tags[1].text
+            content = 'Hi this is the test content manually entered'#all_tags[2].text #Need to be processed into publisher/text
             bold_token = random.choice(positions)
             # bold_token = positions[0] # If we don't want to make it random 
             card = self.ResultCard(title=title,
@@ -56,4 +57,3 @@ class SearchRetriever:
                                     content=content)
             result_cards.append(card)
         return result_cards
-
