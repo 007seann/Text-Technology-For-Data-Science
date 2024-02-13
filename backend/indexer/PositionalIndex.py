@@ -105,7 +105,7 @@ class PositionalIndex:
         headline_token_stream = self.tokeniser.tokenise(headline)
         token_stream = self.tokeniser.tokenise(merged_text)
         
-        stopwords = self.tokeniser.get_stop_words()
+        stopwords = self.tokeniser._get_stop_words()
 
         token_stream_without_stopwords = [token for token in token_stream if token not in stopwords]
         stemmed_tokens = []
