@@ -41,5 +41,6 @@ def search():
 
 if __name__ == '__main__':
     app.run(debug=True)
+    print(search_retriever.index.index)
     #app.run(host='192.168.0.48', port=5000, debug=True, threaded=False)
     #app.run(host='172.20.183.177', port=5000, debug=True, threaded=False)
