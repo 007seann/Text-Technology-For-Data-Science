@@ -22,20 +22,29 @@ class Tokeniser:
         """
         self.use_stopping = use_stopping
         self.use_stemming = use_stemming
-        self.punctuations_to_keep = punctuations_to_keep
-        self.stop_words = self.get_stop_words() if self.use_stopping else None
+        self.altered_punctuations = self._get_altered_punctuations(punctuations_to_keep)
+        self.stop_words = self._get_stop_words()
         self.stemmer = nltk.PorterStemmer()
         self.ner = spacy.load('en_core_web_sm')
+        self.pattern = "[\s" + self.altered_punctuations + "]"
         
-    def get_stop_words(self):
-        if not self.stop_words:
-            self.stop_words = self._read_stop_words()
-        return self.stop_words
+    def _get_stop_words(self):
+        if self.use_stopping:
+            return self._read_stop_words()
+        return set()
 
     def _read_stop_words(self):
         with open(STOPWORDS_PATH, 'r') as f:
             stop_words = set(f.read().split("\n"))
         return stop_words
+    
+    def _get_altered_punctuations(self, punctuations_to_keep):
+        altered_punctuation = string.punctuation
+        # Keep apostrophes in tokens:
+        if punctuations_to_keep != []:
+            for punct in punctuations_to_keep:
+                altered_punctuation = string.punctuation.replace(punct, '')
+        return altered_punctuation
 
     def tokenise(self, sentence):
         """
@@ -45,27 +54,20 @@ class Tokeniser:
 
         Return: list[str]   List of tokens that have been tokenised
         """
-        altered_punctuation = string.punctuation
-        # Keep apostrophes in tokens:
-        if self.punctuations_to_keep != []:
-            for punct in self.punctuations_to_keep:
-                altered_punctuation = string.punctuation.replace(punct, '')
-        
         # Split on punctuations and blank space (\s)
-        tokens = re.split("[\s" + altered_punctuation + "]", sentence)
-        
+        tokens = re.split(self.pattern, sentence)
+
         # Lowercase tokens and remove any leftover punctuations
-        tokens = [token.lower().translate(str.maketrans('', '', string.punctuation)) for token in tokens]
-        
+        tokens = [token.lower() for token in tokens if token and token not in self.altered_punctuations]
+
         # Remove stop words
         if self.use_stopping:
             tokens = [token for token in tokens if token not in self.stop_words]
-        
-        # Stem split tokens
-        tokens = [self.stemmer.stem(token) for token in tokens if self.use_stemming]
 
-        # Remove any blank spaces
-        tokens = [token for token in tokens if token != '']
+        # Stem split tokens
+        if self.use_stemming:
+            tokens = [self.stemmer.stem(token) for token in tokens]
+        
         return tokens
     
     def get_ner(self, sentence, is_headline=False):
