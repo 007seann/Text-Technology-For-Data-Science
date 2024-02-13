@@ -43,6 +43,7 @@ class Database2HTML:
         with document(title="News") as doc:
             with doc.head:
                 link(rel='stylesheet', href='../styling/news_style.css')
+                meta(charset="utf-8")
                 meta(name="lead_paragraph", content=self.lead_paragraph, id="lead_paragraph", hidden="true")
                 meta(name="domain", content=self.domain, id="domain", hidden="true")
                 meta(name="url", content=self.url, id="url", hidden="true")
