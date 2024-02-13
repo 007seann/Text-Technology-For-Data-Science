@@ -5,6 +5,7 @@ sys.path.append('./backend')
 from indexer.Tokeniser import Tokeniser
 import scipy.sparse as sp
 import time
+import pickle
 
 class VectorSpaceModel:
     """
@@ -180,6 +181,36 @@ class VectorSpaceModel:
         idf_component = self.idf[token]
         return tf_component * idf_component
 
+    # def get_query_vector(self, query):
+    #     """
+    #     Returns the vector representation of the query.
+    #     :param query: The query.
+    #     :return: The vector representation of the query.
+    #     """
+    #     score_function = {
+    #         'tfidf': self.calculate_tf_idf,
+    #         'bm25': self.calculate_bm25
+    #     }
+    #     query_vector = sp.dok_array((len(self.vocab), 1))
+    #     tokenised_query = self.tokeniser.tokenise(query)
+    #     for token in tokenised_query:
+    #         if token in self.vocab:
+    #             token_id = self.vocab[token]
+    #             token_count = tokenised_query.count(token)
+    #             query_vector[token_id, 0] = score_function[self.mode](token, 0, is_query=True, query_term_freq=token_count)
+    #     return query_vector
+    
+    # def calculate_vector_similarity(self, query_vector):
+    #     """
+    #     Returns the similarity of the query vector with the document vectors.
+    #     :param query_vector: The query vector.
+    #     :return: The similarity of the query vector with the document vectors.
+    #     """
+    #     similarity = {}
+    #     for doc_id in range(self.N):
+    #         similarity[doc_id] = np.dot(self.score_matrix[doc_id].toarray(), query_vector.toarray())[0][0]
+    #     return sorted(similarity.items(), key=lambda x: x[1], reverse=True)
+
     def get_query_vector(self, query):
         """
         Returns the vector representation of the query.
@@ -190,33 +221,49 @@ class VectorSpaceModel:
             'tfidf': self.calculate_tf_idf,
             'bm25': self.calculate_bm25
         }
-        query_vector = sp.dok_array((len(self.vocab), 1))
+
         tokenised_query = self.tokeniser.tokenise(query)
-        for token in tokenised_query:
+        query_vector_data = []
+        query_vector_row = []
+        query_vector_col = []
+
+        for token in set(tokenised_query):  # Use set to avoid redundant computations
             if token in self.vocab:
                 token_id = self.vocab[token]
                 token_count = tokenised_query.count(token)
-                query_vector[token_id, 0] = score_function[self.mode](token, 0, is_query=True, query_term_freq=token_count)
+                score = score_function[self.mode](token, 0, is_query=True, query_term_freq=token_count)
+                query_vector_data.append(score)
+                query_vector_row.append(token_id)
+                query_vector_col.append(0)
+
+        query_vector = sp.csr_matrix((query_vector_data, (query_vector_row, query_vector_col)), shape=(len(self.vocab), 1))
         return query_vector
-    
+
     def calculate_vector_similarity(self, query_vector):
         """
         Returns the similarity of the query vector with the document vectors.
         :param query_vector: The query vector.
         :return: The similarity of the query vector with the document vectors.
         """
-        similarity = {}
-        for doc_id in range(self.N):
-            similarity[doc_id] = np.dot(self.score_matrix[doc_id].toarray(), query_vector.toarray())[0][0]
-        return sorted(similarity.items(), key=lambda x: x[1], reverse=True)
+        similarity = np.dot(self.score_matrix, query_vector).toarray().flatten()
+        return sorted(enumerate(similarity), key=lambda x: x[1], reverse=True)
 
 if __name__ == '__main__':
     with open('./backend/utils/test_documents.txt', 'r') as file:
         documents = file.readlines()
-    query = "For Adam was first formed, then eve"
-    vsm = VectorSpaceModel(documents, use_stopping=False, use_stemming=False, mode='tfidf')
+    query = "God resting on seventh day"
+
+    # vsm = VectorSpaceModel(documents, use_stopping=False, use_stemming=False, mode='bm25')
+    # pickle.dump(vsm, open('./backend/utils/test_vsm_bm25.pkl', 'wb'))
+    vsm = pickle.load(open('./backend/utils/test_vsm_bm25.pkl', 'rb'))
+
     start = time.time()
     query_vector = vsm.get_query_vector(query)
+    end = time.time()
+    print("Query Vectorisation time: ", end - start)
+
+    start = time.time()
     similarity = vsm.calculate_vector_similarity(query_vector)
     end = time.time()
     print("Query time: ", end - start)
+    print(similarity[:10])
