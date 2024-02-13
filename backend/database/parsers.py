@@ -1,5 +1,6 @@
 from dominate import document
 from dominate.tags import *
+import pandas as pd
 
 from lxml.html import document_fromstring
 
@@ -23,20 +24,36 @@ class CSV2XML:
         return news_xml
 
 class Database2HTML:
-    def __init__(self, date, title, article):
+    def __init__(self, date, title, article, outlet, lead_paragraph, authors, url, domain, political_leaning):
         self.date = date
         self.title = title
         self.article = article
+        self.outlet = outlet
+        self.lead_paragraph = lead_paragraph    
+        self.authors = authors
+        self.url = url
+        self.domain = domain
+        self.political_leaning = political_leaning
 
     def create_html(self):
-        # Create a new html file
+        """
+        Create html with the columns in the database. Note that lead_paragraph is used as the description of the article.
+        return: Rendered html
+        """
         with document(title="News") as doc:
             with doc.head:
                 link(rel='stylesheet', href='../styling/news_style.css')
+                meta(name="lead_paragraph", content=self.lead_paragraph, id="lead_paragraph", hidden="true")
+                meta(name="domain", content=self.domain, id="domain", hidden="true")
+                meta(name="url", content=self.url, id="url", hidden="true")
+
             with doc:
                 with div(style="display: flex; justify-content: center; width: 100%"):
                     with div(style="display: inline-block; max-width: 60%") :
+                        h3(f'Publication outlet: {self.outlet}', id = 'outlet')
+                        h4(f"{self.political_leaning}", id = "political_leaning")
                         h1(self.title , id = "title")
+                        h4(f'Written by: {self.authors}', id = "authors")
                         sub(f"Published {self.date}", id = "date")
                         
                         with div(id = "article"):

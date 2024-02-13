@@ -16,19 +16,19 @@ def create_conn(hostname):
 @app.route('/api/news/<int:id>', methods=["GET"])
 def retrieve_new(id):
     curr, conn = create_conn("94.156.35.233")
-    sql = """SELECT date, title, article FROM news WHERE doc_id = %s"""
+    sql = """SELECT date, title, article, outlet, lead_paragraph, authors, url, domain, political_leaning FROM news WHERE doc_id = %s"""
     curr.execute(sql, (str(id),))
     data = curr.fetchone()
     
     if data is None:
         return "News Not Found", 404
     
-    date, title, article = data
+    date, title, article, outlet, lead_paragraph, authors, url, domain, political_leaning = data
     curr.close()
     conn.close()
 
     # Create html result
-    html = Database2HTML(date, title, article).create_html()
+    html = Database2HTML(date, title, article, outlet, lead_paragraph, authors, url, domain, political_leaning).create_html()
     
     return html, 200
 
