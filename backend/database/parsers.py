@@ -32,7 +32,7 @@ class Database2HTML:
         # Create a new html file
         with document(title="News") as doc:
             with doc.head:
-                link(rel='stylesheet', href='styling/news_style.css')
+                link(rel='stylesheet', href='../styling/news_style.css')
             with doc:
                 with div(style="display: flex; justify-content: center; width: 100%"):
                     with div(style="display: inline-block; max-width: 60%") :
