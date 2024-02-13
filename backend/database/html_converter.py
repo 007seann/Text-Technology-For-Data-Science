@@ -12,14 +12,14 @@ def save_html():
     curr.close()
     conn.close()
     
-    for id in doc_ids[:1]:
+    for id in doc_ids:
         id = id[0]
 
 
         url = f"http://127.0.0.1:5002/api/news/{id}"
         r = requests.get(url).text
         soup = BeautifulSoup(r, "html.parser")
-        outlet = soup.find(attrs={"id" : "article"}).text
+        outlet = soup.find(attrs={"id" : "outlet"}).text.split(" ")[-1].lower()
         folder = f"collection/{outlet}/"
         
         if not os.path.exists(folder):
