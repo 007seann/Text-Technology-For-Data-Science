@@ -5,3 +5,6 @@ backend/indexer/__pycache__/PostingLinkedList.cpython-311.pyc
 backend/indexer/__pycache__/Tokeniser.cpython-311.pyc
 *.log
 *.pyc
+backend/database/collection2/*
+backend/database/collection/*
+*.out

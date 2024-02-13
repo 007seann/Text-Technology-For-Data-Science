@@ -62,7 +62,7 @@ class Tokeniser:
             tokens = [token for token in tokens if token not in self.stop_words]
         
         # Stem split tokens
-        tokens = [self.stemmer.stem(token) for token in tokens and self.use_stemming]
+        tokens = [self.stemmer.stem(token) for token in tokens if self.use_stemming]
 
         # Remove any blank spaces
         tokens = [token for token in tokens if token != '']

@@ -8,7 +8,7 @@ from PostingLinkedList import PostingLinkedList
 
 INDEX_SAVE_PATH = "../database/index/index_base.txt"
 CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
-INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), 'crawltest')
+INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), '../database/collection')
 POSITIONAL_INDEX_LOG_PATH = os.path.join(os.path.dirname(__file__), '../log/index.log')
 STOPWORDS = "english_stop_words.txt"      
 
@@ -31,6 +31,9 @@ class PositionalIndex:
         self.vocabulary = set()
         self.vocabulary_size = 0
         self.headline_index = {}
+        
+        # Initialise index
+        p.build_index()
         
     def build_index(self):
         """
