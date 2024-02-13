@@ -52,38 +52,30 @@ def filter_news():
 
 def load_data(hostname):
     try:
-        """
-        # Corpus created by Tanatip
-        corpus_1 = pd.read_csv("collection/corpus_1.csv")
-        # Corpus created by Stella
-        corpus_2 = pd.read_csv("collection/corpus_2.csv").rename(columns={"published" : "date", "text" : "article"})
-        # Merging both news corpus together and sampling 1000 news from there
-        news_corpus = pd.concat([corpus_1, corpus_2], ignore_index=True).sample(1000)
-        """
-
+        select_columns = ["date_publish","outlet","headline","lead","body","authors","domain","url","political_leaning"]
         # Using the Polusa corpus, again only 1000 news for now
         polusa_2017_1 = pd.read_csv("collection/polusa_balanced/2017_1.csv")
-        polusa_2017_1 = polusa_2017_1[["date_publish", "headline", "body"]]
+        polusa_2017_1 = polusa_2017_1[select_columns]
 
         polusa_2017_2 = pd.read_csv("collection/polusa_balanced/2017_2.csv")
-        polusa_2017_2 = polusa_2017_2[["date_publish", "headline", "body"]]
+        polusa_2017_2 = polusa_2017_2[select_columns]
 
         polusa_2018_1 = pd.read_csv("collection/polusa_balanced/2018_1.csv")
-        polusa_2018_1 = polusa_2018_1[["date_publish", "headline", "body"]]
+        polusa_2018_1 = polusa_2018_1[select_columns]
 
         polusa_2018_2 = pd.read_csv("collection/polusa_balanced/2018_2.csv")
-        polusa_2018_2 = polusa_2018_2[["date_publish", "headline", "body"]]
+        polusa_2018_2 = polusa_2018_2[select_columns]
 
         polusa_2019_1 = pd.read_csv("collection/polusa_balanced/2019_1.csv")
-        polusa_2019_1 = polusa_2019_1[["date_publish", "headline", "body"]]
+        polusa_2019_1 = polusa_2019_1[select_columns]
 
         polusa_2019_2 = pd.read_csv("collection/polusa_balanced/2019_2.csv")
-        polusa_2019_2 = polusa_2019_2[["date_publish", "headline", "body"]]
+        polusa_2019_2 = polusa_2019_2[select_columns]
 
         news_corpus = pd.concat([polusa_2017_1, polusa_2017_2, polusa_2018_1, polusa_2018_2, polusa_2019_1, polusa_2019_2], ignore_index=True)
-        news_corpus = news_corpus.rename(columns={"date_publish" : "date", "headline" : "title", "body" : "article"})
+        news_corpus = news_corpus.rename(columns={"date_publish" : "date", "headline" : "title", "body" : "article", "lead" : "lead_paragraph"})
 
-        news_corpus = news_corpus[["date", "title", "article"]].sample(1000)
+        news_corpus = news_corpus[["date", "title", "article", "outlet", "lead_paragraph", "authors", "url", "political_leaning"]].sample(1000)
 
         # Adding ID to each sample
         news_corpus.insert(0, "doc_id", list(range(1, news_corpus.shape[0] + 1)))
