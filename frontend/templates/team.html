@@ -1,16 +1,159 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>About Us</title>
-    <link href = "static/style.css" rel = "stylesheet" type = "text/css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+  font-family: "Arial" , sans-serif;
+  margin: 0;
+  color: #041E42;
+  background:#d3d3d3;
+}
 
+html {
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+
+.svg-image {
+    top: 0px;
+    
+    position: absolute;
+    width: 12%; 
+    height: auto;
+    float: left; 
+    padding: 0px 0px;
+}
+
+
+.row{
+    left: 15%;
+    top: 20%;
+    position: absolute;
+    padding: 10px 0px 10px 0px;
+    width: 70%;
+    text-align: center;
+    border-radius: 12px;
+    background-color: #041E42;
+    color: white;
+    
+    
+
+}
+.column {
+  float: left;
+  width: 33.33%;
+  margin-bottom: 16px;
+  padding: 0 8px;
+}
+
+.card {
+  border: #d3d3d3;
+  box-shadow: 0 4px 8px 0 #d3d3d3;
+  margin: 8px;
+}
+
+
+.container {
+  padding: 0 16px;
+}
+
+.container::after, .row::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+.title {
+  color: #d3d3d3;
+}
+
+@media screen and (max-width: 650px) {
+  .column {
+    width: 100%;
+    float:none;
+}
+}
+
+</style>
 </head>
 <body>
-    <div class="header">
-        <h2 style="text-align:center">Our Team</h2>
+  <pre> </pre>
+  <h2 style="text-align:center">Our Team</h2>
+  <div class = "logo_container">
+    <img src="static/rev_crop.svg" alt="Logo" class="svg-image">
+  </div>
+  <div class="row">
+    <pre> </pre>
+    <div class="column">
+      <div class="card">
+        <img src="static/person1.jpg" alt="Jane" style="width:100%">
+        <div class="container">
+          <h2>Daniel Kim</h2>
+          <p class="title">Backend Developer</p>
+          <p>Some text that describes me lorem ipsum ipsum lorem.</p>
+        </div>
+      </div>
     </div>
-    
+
+  <div class="column">
+    <div class="card">
+      <img src="static/person1.jpg" alt="Mike" style="width:100%">
+      <div class="container">
+        <h2>Darakshan Ali</h2>
+        <p class="title">Frontend Developer</p>
+        <p>Some text that describes me lorem ipsum ipsum lorem.</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="column">
+    <div class="card">
+      <img src="static/person1.jpg" alt="John" style="width:100%">
+      <div class="container">
+        <h2>Kuan Lon Vu</h2>
+        <p class="title">Database Engineer</p>
+        <p>Some text that describes me lorem ipsum ipsum lorem.</p>
+      </div>
+    </div>
+  </div>
+  <div class="column">
+    <div class="card">
+      <img src="static/person1.jpg" alt="Jane" style="width:100%">
+      <div class="container">
+        <h2>Martin Namukombo</h2>
+        <p class="title">Backend Engineer</p>
+        <p>Some text that describes me lorem ipsum ipsum lorem.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="column">
+    <div class="card">
+      <img src="static/person1.jpg" alt="Mike" style="width:100%">
+      <div class="container">
+        <h2>Sean Sangkyu Choi</h2>
+        <p class="title">Backend Engineer</p>
+        <p>Some text that describes me lorem ipsum ipsum lorem.</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="column">
+    <div class="card">
+      <img src="static/person1.jpg" alt="John" style="width:100%">
+      <div class="container">
+        <h2>Tanatip Timtong</h2>
+        <p class="title">Database Engineer</p>
+        <p>Some text that describes me lorem ipsum ipsum lorem.</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

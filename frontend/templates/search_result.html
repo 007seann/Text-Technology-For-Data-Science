@@ -34,7 +34,12 @@
                             <p>{{ card.date }}</p>
                             <p>{{ card.publisher }}</p>
                             <p><a href="{{ card.url }}">{{ card.url }}</a></p>
-                            <p>{{ card.content }}</p>
+                            <!-- <p>{{ card.content }}</p> -->
+                            <p>{{ card.content|replace(card.bold_token, '<span class="bold-token">{{ card.bold_token }}</span>')|safe }}</p>
+                        
+                            <pre>
+
+                            </pre>
                         </div>                                                   
                     </div>
                 {% endfor %}
@@ -44,6 +49,8 @@
                 <h3>Column 3</h3>
                 <p>qwerty asdfg zxcv</p>
             </div>
+
+        
 
             {% else %}
                 <div>

@@ -2,6 +2,7 @@ import sys
 sys.path.append("./")
 from backend.search.SearchRetriever import SearchRetriever
 from flask import Flask, render_template, request
+from flask_paginate import Pagination, get_page_parameter
 app = Flask(__name__)
 
 search_retriever = SearchRetriever()
@@ -23,7 +24,16 @@ def search():
     if request.method == "POST":
         query = request.form['query']
         result_cards = search_retriever.get_results(query)
-        return render_template('search_result.html', query = query)
+        '''
+        for card in result_cards:
+            print("Title:", card.title)
+            print("Date:", card.date)
+            print("Publisher:", card.publisher)
+            print("Content:", card.content)
+            # Add more attributes as needed
+            print("-" * 50)  # Just for visual separation between cards
+        '''
+        return render_template('search_result.html', query = query, result_cards=result_cards)
     else:
         return "Method not Allowed"
 
@@ -32,3 +42,4 @@ def search():
 if __name__ == '__main__':
     app.run(debug=True)
     #app.run(host='192.168.0.48', port=5000, debug=True, threaded=False)
+    #app.run(host='172.20.183.177', port=5000, debug=True, threaded=False)
