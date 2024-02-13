@@ -2,6 +2,7 @@ import os
 import time
 import pickle
 import hashlib
+import logging
 from bs4 import BeautifulSoup
 
 CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
@@ -10,11 +11,13 @@ SOURCE_FILE_EXTENSION = '.html'
 class Crawler:
     def __init__(self, base_directories, cache_file=CRAWL_CACHE_PATH):
         self.base_directories = base_directories if isinstance(base_directories, list) else [base_directories]
+        self.logger = logging.getLogger(self.__class__.__name__)
+        
         self.cache_file = cache_file
         self.updated_stack = []  # Stack to track updated files
         self.cache = {}
 
-    def crawl(self, rebuild=False):
+    def crawl(self):
             """
             Crawls through the base directories and updates the cache with new or modified files.
 
@@ -26,10 +29,6 @@ class Crawler:
 
             """
             index_changed = False
-            if rebuild:
-                self.cache = {}
-            else:
-                self.load_cache()
             for base_directory in self.base_directories:
                 for root, _, files in os.walk(base_directory):
                     for file in files:
@@ -43,9 +42,14 @@ class Crawler:
                             self.updated_stack.append(file_path)
                             self.cache[file_path] = checksum  # Update cache with new checksum
             if not self.cache:
+                self.logger.info("No files found in the base directories.")
                 raise Exception("No files found in the base directories.")
             if index_changed:
-                print("Index changed, updating cache...")
+                
+                self.logger.info("Index changed, updating cache...")
+                self.logger.info(f"Current cache size: {len(self.cache)}")
+                self.logger.info(f"Updated files size: {len(self.updated_stack)}")
+                
                 self.save_cache()
         
         
@@ -69,12 +73,18 @@ class Crawler:
     def load_cache(self):
         try:
             with open(self.cache_file, 'rb') as file:
-                print("Loading cache...\n", self.cache_file)
+                self.logger.info(f"Loading cache from {self.cache_file}")
                 self.cache = pickle.load(file)
+                self.crawl()  # Update the cache with new or modified files
+                new_files = self.get_new_files()
+                self.logger.info(f"New files: {new_files}")
+                self.logger.info(f"Found {len(new_files)} new or modified files.")
+                
+                
         except (FileNotFoundError, EOFError) as e:
-            print(f"Cache file not found or is empty, creating new cache. Error: {e}")
-            self.crawl(True)  # Populate self.cache with fresh data
-            self.save_cache()  # Save the newly created cache
+            self.logger.info(f"Cache file not found or is empty, creating new cache. Error: {e}")
+            self.cache = {}
+            self.crawl()  # Populate self.cache with fresh data
 
 
     def save_cache(self):
@@ -82,8 +92,10 @@ class Crawler:
         if os.path.exists(self.cache_file):
             backup_path = "{}.{}".format(self.cache_file, time.strftime("%Y%m%d-%H%M%S"))
             os.rename(self.cache_file, backup_path)
+            self.logger.info(f"Backed up old cache to {backup_path}")
         
         with open(self.cache_file, 'wb') as file:
+            self.logger.info(f"Saving cache to {self.cache_file}")
             pickle.dump(self.cache, file)
 
 
@@ -116,5 +128,4 @@ class Crawler:
             content = ' '.join([elem.get_text(strip=True) for elem in soup.find_all(html_tag)])
             if content:
                 doc_dict[dict_key] = content
-        
         return doc_dict

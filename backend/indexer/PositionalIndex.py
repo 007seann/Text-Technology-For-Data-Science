@@ -1,47 +1,22 @@
-from PostingLinkedList import PostingLinkedList
-from Tokeniser import Tokeniser
-from Crawler import Crawler
-import math
-from nltk.stem import PorterStemmer
 import os
-import xml.etree.ElementTree as ET
+import math
+import logging
+from Crawler import Crawler
+from Tokeniser import Tokeniser
+from nltk.stem import PorterStemmer
+from PostingLinkedList import PostingLinkedList
 
 INDEX_SAVE_PATH = "../database/index/index_base.txt"
 CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
 INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), 'crawltest')
-STOPWORDS = "english_stop_words.txt"
+POSITIONAL_INDEX_LOG_PATH = os.path.join(os.path.dirname(__file__), '../log/index.log')
+STOPWORDS = "english_stop_words.txt"      
 
-class XMLDocParser:
-    def __init__(self, filename):
-        self.filename = filename
-
-    def stream_docs(self):
-        if not os.path.exists(self.filename):
-            raise Exception("File does not exist: ", self.filename)
-        
-        # Use iterparse for efficient streaming
-        context = ET.iterparse(self.filename, events=("start", "end"))
-        text_doc = {} # Contains body text
-        meta_doc = {} # Contains metadata (E.g. headline, date, author, etc)
-        for event, elem in context:
-            tag = elem.tag
-
-            if event == "start" and tag == "DOC":
-                text_doc = {}
-                meta_doc = {}
-            elif event == "end":
-                if tag == "DOC":
-                    yield text_doc, meta_doc
-                    elem.clear()  # Free up memory
-                elif tag == "TEXT":
-                    text_doc[tag] = elem.text.strip() if elem.text else ""
-                else:
-                    meta_doc[tag] = elem.text.strip() if elem.text else ""
-                elem.clear()
-
-                
 class PositionalIndex:
-    def __init__(self):            
+    logging.basicConfig(filename=POSITIONAL_INDEX_LOG_PATH, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+    def __init__(self):   
+        self.logger = logging.getLogger(self.__class__.__name__) 
+                
         # Stemming and Tokenisation utils
         self.stemmer = PorterStemmer() # TODO
         self.tokeniser = Tokeniser() #TODO
@@ -49,7 +24,8 @@ class PositionalIndex:
         
         self.enable_stemming = False
         # In memory data
-        self.document_id_mapping = {} # We use this map
+        self.url_to_docid = {} # {url: docId}
+        self.docid_to_url = {} # {docId: url}
         self.index = {}
         self.document_ids = set()
         self.vocabulary = set()
@@ -64,15 +40,20 @@ class PositionalIndex:
             Exception: If no files are found in the base directories.
 
         """
-        self.crawler.crawl(rebuild=True)
-        cache = self.crawler.cache
-        if not cache:
+        self.crawler.load_cache()
+        crawler_url_cache = self.crawler.cache # {url: checksum}
+        if not crawler_url_cache:
+            self.logger.info("No files found in the base directories.")
             raise Exception("No files found in the base directories.")
-        for file_path, checksum in cache.items():
-            if file_path not in self.document_id_mapping:
-                self.document_id_mapping[file_path] = len(self.document_id_mapping)
-                document_dict = self.crawler.html_to_dict(file_path, self.document_id_mapping[file_path])
-                self.insert_document(document_dict)
+        for file_path, checksum in crawler_url_cache.items():
+            if file_path not in self.url_to_docid:
+                self.logger.info(f"Processing file: {file_path}")
+
+                self.url_to_docid[file_path] = len(self.url_to_docid)
+                self.docid_to_url[len(self.url_to_docid)] = file_path
+                doc_dict = self.crawler.html_to_dict(file_path, self.url_to_docid[file_path])
+                
+                self.insert_document(doc_dict)
     
     def reload_index(self):
         """
@@ -86,7 +67,7 @@ class PositionalIndex:
         4. Converts the HTML content of each new page to a dictionary representation using the `html_to_dict` method of the crawler object.
         5. Inserts the document into the index using the `insert_document` method.
 
-        Note: This method assumes that the `crawler` object and the `document_id_mapping` dictionary are already initialized.
+        Note: This method assumes that the `crawler` object and the `url_to_docid` dictionary are already initialized.
 
         Parameters:
         None
@@ -94,19 +75,17 @@ class PositionalIndex:
         Returns:
         None
         """
-        self.crawler.crawl(rebuild=False)
+        self.crawler.crawl()
         new_pages = self.crawler.get_new_files(clear_queue=True)
         for file_path in new_pages:
-            self.document_id_mapping[file_path] = len(self.document_id_mapping)
-            document_dict = self.crawler.html_to_dict(file_path, self.document_id_mapping[file_path])            
-            self.insert_document(document_dict)
+            self.url_to_docid[file_path] = len(self.url_to_docid)
+            self.docid_to_url[len(self.url_to_docid)] = file_path
+            doc_dict = self.crawler.html_to_dict(file_path, self.url_to_docid[file_path])            
+            self.insert_document(doc_dict) 
         
     
-    # Will take an XML parsed doc. 
     def insert_document(self, document_dict, include_subsections=False):
         doc_id = document_dict.get("DOCNO")
-        print("document  ", doc_id)
-        print(self.document_ids)
         # Document has already been added. 
         if doc_id in self.document_ids:
             return
@@ -148,11 +127,8 @@ class PositionalIndex:
                     del stemmed_headline_tokens[h_index]
                     break
                         
-
         self.headline_index[tuple(headline)] = {doc_id: span}
-        
-
-        
+    
         ## Mapping between token {term : PostingLinkedList}
         term_posting_mapping = {}
         token_index = 0
@@ -494,4 +470,4 @@ if __name__ == '__main__':
     
     p = PositionalIndex()
     # Call build method like below, to build the index from scratch.
-    #p.build_index()
+    p.build_index()
