@@ -2,7 +2,7 @@ import sys
 sys.path.append("./")
 from backend.search.SearchRetriever import SearchRetriever
 from flask import Flask, render_template, request
-from flask_paginate import Pagination, get_page_parameter
+# from flask_paginate import Pagination, get_page_parameter
 app = Flask(__name__)
 
 search_retriever = SearchRetriever()
