@@ -13,7 +13,7 @@ class Tokeniser:
         Use stopping (i.e., remove English stop words such as 'and', 'or', and 'but')
     """
 
-    def __init__(self, use_stopping=False, punctuations_to_keep=[]):
+    def __init__(self, use_stopping=False, use_stemming=False, punctuations_to_keep=[]):
         """
         Initialise the Tokeniser class
 
@@ -21,6 +21,7 @@ class Tokeniser:
         punctuations_to_keep: list[str]     List of punctuations to keep (i.e., do not split on these punctuations)
         """
         self.use_stopping = use_stopping
+        self.use_stemming = use_stemming
         self.punctuations_to_keep = punctuations_to_keep
         self.stop_words = self.get_stop_words() if self.use_stopping else None
         self.stemmer = nltk.PorterStemmer()
@@ -61,7 +62,7 @@ class Tokeniser:
             tokens = [token for token in tokens if token not in self.stop_words]
         
         # Stem split tokens
-        tokens = [self.stemmer.stem(token) for token in tokens]
+        tokens = [self.stemmer.stem(token) for token in tokens and self.use_stemming]
 
         # Remove any blank spaces
         tokens = [token for token in tokens if token != '']
