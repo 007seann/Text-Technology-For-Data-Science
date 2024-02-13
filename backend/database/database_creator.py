@@ -48,34 +48,40 @@ def filter_news():
     news_corpus.sort_values(by=['date'], inplace=True)
     news_corpus.to_csv("collection/corpus_1.csv",index=False)
     
-     
+def prepare_csv(csv_filename):
+    """
+    Preprocess the csv file before importing to the database, removing article entries with empty headlines, and select
+    relevant rows specified under `select_columns`.
+    param: csv_filename: The name of the csv file to preprocess
+
+    """
+    select_columns = ["date_publish","outlet","headline","lead","body","authors","domain","url","political_leaning"]
+
+    csv_file = pd.read_csv(f"collection/polusa_balanced/{csv_filename}.csv")
+
+    csv_file = csv_file[csv_file["headline"].notna()]
+    csv_file = csv_file[select_columns]
+
+    return csv_file
 
 def load_data(hostname):
+    """
+    Sample 1000 news articles from the Polusa corpus and import them into the database on the VPS.
+    param: hostname - The host IP address of the VPS
+    """
     try:
-        select_columns = ["date_publish","outlet","headline","lead","body","authors","domain","url","political_leaning"]
         # Using the Polusa corpus, again only 1000 news for now
-        polusa_2017_1 = pd.read_csv("collection/polusa_balanced/2017_1.csv")
-        polusa_2017_1 = polusa_2017_1[select_columns]
-
-        polusa_2017_2 = pd.read_csv("collection/polusa_balanced/2017_2.csv")
-        polusa_2017_2 = polusa_2017_2[select_columns]
-
-        polusa_2018_1 = pd.read_csv("collection/polusa_balanced/2018_1.csv")
-        polusa_2018_1 = polusa_2018_1[select_columns]
-
-        polusa_2018_2 = pd.read_csv("collection/polusa_balanced/2018_2.csv")
-        polusa_2018_2 = polusa_2018_2[select_columns]
-
-        polusa_2019_1 = pd.read_csv("collection/polusa_balanced/2019_1.csv")
-        polusa_2019_1 = polusa_2019_1[select_columns]
-
-        polusa_2019_2 = pd.read_csv("collection/polusa_balanced/2019_2.csv")
-        polusa_2019_2 = polusa_2019_2[select_columns]
+        polusa_2017_1 = prepare_csv("2017_1")
+        polusa_2017_2 = prepare_csv("2017_2")
+        polusa_2018_1 = prepare_csv("2018_1")
+        polusa_2018_2 = prepare_csv("2018_2")
+        polusa_2019_1 = prepare_csv("2019_1")
+        polusa_2019_2 = prepare_csv("2019_2")
 
         news_corpus = pd.concat([polusa_2017_1, polusa_2017_2, polusa_2018_1, polusa_2018_2, polusa_2019_1, polusa_2019_2], ignore_index=True)
         news_corpus = news_corpus.rename(columns={"date_publish" : "date", "headline" : "title", "body" : "article", "lead" : "lead_paragraph"})
 
-        news_corpus = news_corpus[["date", "title", "article", "outlet", "lead_paragraph", "authors", "url", "political_leaning"]].sample(1000)
+        news_corpus = news_corpus[["date", "title", "article", "outlet", "lead_paragraph", "authors", "domain", "url", "political_leaning"]].sample(1000)
 
         # Adding ID to each sample
         news_corpus.insert(0, "doc_id", list(range(1, news_corpus.shape[0] + 1)))
