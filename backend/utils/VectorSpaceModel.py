@@ -181,36 +181,6 @@ class VectorSpaceModel:
         idf_component = self.idf[token]
         return tf_component * idf_component
 
-    # def get_query_vector(self, query):
-    #     """
-    #     Returns the vector representation of the query.
-    #     :param query: The query.
-    #     :return: The vector representation of the query.
-    #     """
-    #     score_function = {
-    #         'tfidf': self.calculate_tf_idf,
-    #         'bm25': self.calculate_bm25
-    #     }
-    #     query_vector = sp.dok_array((len(self.vocab), 1))
-    #     tokenised_query = self.tokeniser.tokenise(query)
-    #     for token in tokenised_query:
-    #         if token in self.vocab:
-    #             token_id = self.vocab[token]
-    #             token_count = tokenised_query.count(token)
-    #             query_vector[token_id, 0] = score_function[self.mode](token, 0, is_query=True, query_term_freq=token_count)
-    #     return query_vector
-    
-    # def calculate_vector_similarity(self, query_vector):
-    #     """
-    #     Returns the similarity of the query vector with the document vectors.
-    #     :param query_vector: The query vector.
-    #     :return: The similarity of the query vector with the document vectors.
-    #     """
-    #     similarity = {}
-    #     for doc_id in range(self.N):
-    #         similarity[doc_id] = np.dot(self.score_matrix[doc_id].toarray(), query_vector.toarray())[0][0]
-    #     return sorted(similarity.items(), key=lambda x: x[1], reverse=True)
-
     def get_query_vector(self, query):
         """
         Returns the vector representation of the query.
