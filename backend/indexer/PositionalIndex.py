@@ -10,7 +10,7 @@ INDEX_SAVE_PATH = "../database/index/index_base.txt"
 CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
 INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), '../database/collection')
 POSITIONAL_INDEX_LOG_PATH = os.path.join(os.path.dirname(__file__), '../log/index.log')
-STOPWORDS = "english_stop_words.txt"      
+STOPWORDS = "english_stop_words.txt"
 
 class PositionalIndex:
     logging.basicConfig(filename=POSITIONAL_INDEX_LOG_PATH, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
@@ -33,7 +33,7 @@ class PositionalIndex:
         self.headline_index = {}
         
         # Initialise index
-        p.build_index()
+        self.build_index()
         
     def build_index(self):
         """
@@ -469,8 +469,8 @@ class PositionalIndex:
         else:
             return self.search_and(query, include_positions=True)
     
-if __name__ == '__main__':
+# if __name__ == '__main__':
     
-    p = PositionalIndex()
-    # Call build method like below, to build the index from scratch.
-    p.build_index()
+#     p = PositionalIndex()
+#     # Call build method like below, to build the index from scratch.
+#     p.build_index()

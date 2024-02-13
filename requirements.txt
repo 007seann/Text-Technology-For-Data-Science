@@ -16,12 +16,7 @@ wikipedia
 autocorrect
 contextualSpellCheck
 BeautifulSoup
-<<<<<<< HEAD
 requests
-
 spacy>=3.0.0,<4.0.0
 en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.4.0/en_core_web_sm-3.4.0-py3-none-any.whl
-beautifulsoup4
-=======
-requests
->>>>>>> parent of 51b8966 (Extension to current crawler file. Adds sub directiory exploration and integrates into Positional Index class.)
+flask_paginate

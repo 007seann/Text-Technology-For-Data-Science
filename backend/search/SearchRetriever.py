@@ -22,7 +22,6 @@ class SearchRetriever:
 
     def __init__(self):
         self.index = PositionalIndex()
-        self.index.load_index('./backend/database/index/index_base.txt')
         self.faker = Faker()
 
     def _get_news(self, doc_id):
