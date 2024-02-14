@@ -24,7 +24,7 @@ fake = Faker()
 
 # Load indexer
 indexer = PositionalIndex()
-indexer.load_index('../backend/database/index/index_base.txt')
+#indexer.load_index('../backend/database/index/index_base.txt')
 spell_checker = SpellChecker(use_secondary=True) 
 
 @dataclass
