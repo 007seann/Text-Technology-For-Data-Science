@@ -23,9 +23,16 @@ from SpellChecker import SpellChecker
 fake = Faker()
 
 # Load indexer
-indexer = PositionalIndex()
+@st.cache_resource
+def indexer_resource():
+    return PositionalIndex()
+indexer = indexer_resource()
+
 #indexer.load_index('../backend/database/index/index_base.txt')
-spell_checker = SpellChecker(use_secondary=True) 
+@st.cache_resource
+def spell_checker_resource():
+    return SpellChecker(use_secondary=True)
+spell_checker = spell_checker_resource()
 
 @dataclass
 class SearchResult:
