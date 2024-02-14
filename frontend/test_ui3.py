@@ -76,17 +76,18 @@ def display_search_results(metadata, query, correction=''):
     
     
 
-search_wikipedia = lambda searchterm: [searchterm] + wikipedia.search(searchterm) if searchterm else [searchterm]
+#search_wikipedia = lambda searchterm: [searchterm] + wikipedia.search(searchterm) if searchterm else [searchterm]
+search_wikipedia = lambda searchterm: [searchterm] if searchterm else [searchterm]
 
 # Set page config
 st.set_page_config(page_title="Search Engine with Timeline", layout="wide")
 
 
-with open('example.json', "r") as f:
-    timeline_data = f.read()
+#with open('example.json', "r") as f:
+#    timeline_data = f.read()
 
 
-data = json.dumps(timeline_data)
+#data = json.dumps(timeline_data)
     
 
 def timeline(data, height=800):
@@ -143,7 +144,7 @@ def timeline(data, height=800):
 
     return static_component
 
-timeline(timeline_data, height=320)
+#timeline(timeline_data, height=320)
 
 # Initialize query in session state
 if 'query' not in st.session_state:
@@ -159,7 +160,7 @@ with col1:
 
 with col2:
     st.subheader("Search")
-    query = st_searchbox(search_wikipedia, placeholder="Search..", clear_on_submit=False, rerun_on_update=True) 
+    query = st.text_input(label="Search", value=st.session_state['query'])
     
     if st.button("Search", use_container_width=True) or query:
         correction = spell_checker.check_and_correct(query)
