@@ -270,8 +270,9 @@ class VectorSpaceModel:
         :return: The documents that contain the query.
         """
         query_vector = self.get_query_vector(query)
-        similarity = self.calculate_vector_similarity(query_vector)
-        return similarity[:top]
+        similarity = self.calculate_vector_similarity(query_vector)[:top]
+        doc_id_positions = [(doc_id, []) for doc_id, _ in similarity]
+        return doc_id_positions
 
 # if __name__ == '__main__':
 #     with open('./backend/utils/test_documents.txt', 'r') as file:
