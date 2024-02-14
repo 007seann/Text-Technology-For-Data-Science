@@ -87,7 +87,7 @@ def display_search_results(metadata, query, correction=''):
 search_wikipedia = lambda searchterm: [searchterm] if searchterm else [searchterm]
 
 # Set page config
-st.set_page_config(page_title="Search Engine with Timeline", layout="wide")
+#st.set_page_config(page_title="Search Engine with Timeline", layout="wide")
 
 
 #with open('example.json', "r") as f:
