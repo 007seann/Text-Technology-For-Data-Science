@@ -1,9 +1,5 @@
 import json
-import re
 from sympy import use
-import wikipedia
-import random
-import time
 import sys
 import streamlit as st
 import streamlit.components.v1 as components
@@ -11,16 +7,16 @@ from dataclasses import dataclass
 from streamlit_pills import pills
 from streamlit_searchbox import st_searchbox
 from faker import Faker
-import requests
-from bs4 import BeautifulSoup
 
 sys.path.append('./backend/utils')
 sys.path.append('./backend/indexer')
+sys.path.append('./backend/search')
+sys.path.append('./')
 
-from PositionalIndex import PositionalIndex
-from SpellChecker import SpellChecker
+from backend.search.SearchRetriever import SearchRetriever
+from backend.indexer.PositionalIndex import PositionalIndex
+from backend.utils.SpellChecker import SpellChecker
 
-fake = Faker()
 
 # Load indexer
 @st.cache_resource
@@ -28,11 +24,12 @@ def indexer_resource():
     return PositionalIndex()
 indexer = indexer_resource()
 
-#indexer.load_index('../backend/database/index/index_base.txt')
 @st.cache_resource
 def spell_checker_resource():
     return SpellChecker(use_secondary=True)
 spell_checker = spell_checker_resource()
+
+search_retriever = SearchRetriever(indexer)
 
 @dataclass
 class SearchResult:
@@ -40,22 +37,8 @@ class SearchResult:
     description: str
     link: str
     image: str  # Image URL
-    
-def get_news(doc_id):
-    url = "http://ttds.martinnn.com:5002/api/news/{}".format(doc_id)
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    return soup
 
-def make_results(metadata):
-    results = []
-    for date, title in metadata:
-        link = fake.url()
-        image = fake.image_url(width=50, height=50)  
-        results.append(SearchResult(title=title, description=date, link=link, image=image))
-    return results
-
-def display_search_results(metadata, query, correction=''):
+def display_search_results(result_cards, query, correction=''):
     # Style configuration
     title_color = '#0000EE' 
     font_family = 'Arial' 
@@ -64,19 +47,17 @@ def display_search_results(metadata, query, correction=''):
         if st.button(f"Did you mean: :blue[**_{correction}_**]?"):
             query = correction
     st.markdown(f"<span style='font-size: 100%; color: gray'>Showing results for: <span style='color: blue'><b><i>'{query}'</i></b></span></span>", unsafe_allow_html=True)
-    results = make_results(metadata)
-    st.caption(f"Found {len(results)} results.")
-    for result in results:
-        print(result)
+    st.caption(f"Found {len(result_cards)} results.")
+    for card in result_cards:
         st.markdown(f"""
         <div style="display: flex; align-items: center; padding: 10px; margin: 10px 0; border-radius: 10px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);">
-            <img src="{result.image}" alt="{result.title}" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 10px;">
+            <img src="{card.image}" alt="{card.title}" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 10px;">
             <div style="flex-grow: 1;">
                 <h4 style="margin: 0; color: {title_color}; font-family: {font_family}; font-size: {font_size};">
-                    <a href="{result.link}" target="_blank" style="text-decoration: none; color: {title_color};">{result.title}</a>
+                    <a href="{card.url}" target="_blank" style="text-decoration: none; color: {title_color};">{card.title}</a>
                 </h4>
-                <a href="{result.link}" target="_blank" style="text-decoration: none; color: grey;">{result.link}</a>
-                <p style="color: grey; font-family: {font_family}; font-size: {font_size};">{result.description}</p>
+                <a href="{card.url}" target="_blank" style="text-decoration: none; color: grey;">{card.url}</a>
+                <p style="color: grey; font-family: {font_family}; font-size: {font_size};">{card.content}</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -162,8 +143,8 @@ if 'selected_pills' not in st.session_state:
 
 col1, col2, col3 = st.columns([1,4,1])
 
-with col1:
-    st.subheader("Timeline")
+# with col1:
+#     st.subheader("Timeline")
 
 with col2:
     st.subheader("Search")
@@ -171,29 +152,21 @@ with col2:
     
     if st.button("Search", use_container_width=True) or query:
         correction = spell_checker.check_and_correct(query)
-        returned_docs = indexer.process_query(correction)
-        metadata = []
-        for doc_id, positions in returned_docs:
-            article = get_news(1) # Change '1' to doc_id when index is synced with db
-            all_tags = article.find_all('p')
-            date = all_tags[0].text
-            title = all_tags[1].text
-            content = all_tags[2].text # Need to add this later
-            metadata.append((date, title))
-        display_search_results(metadata, query, correction=correction)
+        result_cards = search_retriever.get_results(correction)
+        display_search_results(result_cards, query, correction=correction)
         st.session_state['selected_pills'] = []
 
-with col3:
-    st.container()
-    st.subheader("NER")
+# with col3:
+#     st.container()
+#     st.subheader("NER")
 
-    pill_options = [fake.word() for _ in range(5)] 
-    pill_icons = ["🍀", "🎈", "🌈", "🔥", "🌟"] 
+#     pill_options = [fake.word() for _ in range(5)] 
+#     pill_icons = ["🍀", "🎈", "🌈", "🔥", "🌟"] 
 
-    # Display pills and get the selected pill
-    selected_pill = pills("Filter by:", pill_options, pill_icons)
+#     # Display pills and get the selected pill
+#     selected_pill = pills("Filter by:", pill_options, pill_icons)
     
-    st.write(f"You selected: {selected_pill}")
+#     st.write(f"You selected: {selected_pill}")
     
     
 

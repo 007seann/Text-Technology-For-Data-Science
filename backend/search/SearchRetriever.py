@@ -1,13 +1,13 @@
 import sys
 sys.path.append("./backend/indexer")
-from backend.indexer.PositionalIndex import PositionalIndex
 from faker import Faker
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 import lxml
+import os
+import logging
 
 class SearchRetriever:
-
     @dataclass
     class ResultCard:
         title: str
@@ -19,19 +19,31 @@ class SearchRetriever:
         bold_token: int
         content: str
 
-    def __init__(self):
-        self.index = PositionalIndex()
+    def __init__(self, index):
+        self.index = index
         self.faker = Faker()
+        self.logger = logging.getLogger(self.__class__.__name__) 
+        self.logger.info(f"SearchRetriever loaded. Ready for query")
 
     def _get_news(self, doc_id):
         url = self.index.docid_to_url[int(doc_id)]
         with open(url, "r") as f:
             html = f.read()
+            self.logger.info(f"Retrieved url {url}")
         return BeautifulSoup(html, "lxml")
     
     def _search(self, query):
         doc_positions_list = self.index.process_query(query)
+        self.logger.info(f"Retrieved documents {doc_positions_list} for query {query}")
         return doc_positions_list
+
+    def _get_relevant_content(self, content, bold_token, left_window=15, right_window=15):
+        split_content = content.split()
+        if bold_token < left_window:
+            left_window = bold_token
+        if len(split_content) - bold_token < right_window:
+            right_window = len(split_content) - bold_token
+        return "...{}...".format(split_content[bold_token-left_window:bold_token+right_window])
     
     def get_results(self, query):
         result_cards = []
@@ -46,6 +58,7 @@ class SearchRetriever:
             url=self.faker.url()
             image=self.faker.image_url(width=50, height=50),
             bold_token = positions[0]
+            relevant_content = self._get_relevant_content(content, bold_token)
             card = self.ResultCard(title=title,
                                     url=url,
                                     image=image,
@@ -53,6 +66,7 @@ class SearchRetriever:
                                     publisher=publisher,
                                     sentiment=0.0, # TODO
                                     bold_token=bold_token,
-                                    content=content)
+                                    content=relevant_content)
+            self.logger.info(f"Created result card {card}")
             result_cards.append(card)
         return result_cards

@@ -468,9 +468,3 @@ class PositionalIndex:
             return self.search_phrase(phrase, include_positions=True)
         else:
             return self.search_and(query, include_positions=True)
-    
-# if __name__ == '__main__':
-    
-#     p = PositionalIndex()
-#     # Call build method like below, to build the index from scratch.
-#     p.build_index()
