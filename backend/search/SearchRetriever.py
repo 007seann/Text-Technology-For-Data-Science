@@ -2,10 +2,9 @@ import sys
 sys.path.append("./backend/indexer")
 from backend.indexer.PositionalIndex import PositionalIndex
 from faker import Faker
-import requests
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
-import random
+import lxml
 
 class SearchRetriever:
 
@@ -25,7 +24,10 @@ class SearchRetriever:
         self.faker = Faker()
 
     def _get_news(self, doc_id):
-        pass
+        url = self.index.docid_to_url[int(doc_id)]
+        with open(url, "r") as f:
+            html = f.read()
+        return BeautifulSoup(html, "lxml")
     
     def _search(self, query):
         doc_positions_list = self.index.process_query(query)
@@ -33,19 +35,20 @@ class SearchRetriever:
     
     def get_results(self, query):
         result_cards = []
-        # doc_positions_list = self._search(query)
-        # returned_news = [(self._get_news(1), positions) for doc_id, positions in doc_positions_list]
-        # for raw_html, positions in returned_news:
-        num_results = 5
-        for _ in range(num_results):
-            date = self.faker.date()
-            title = self.faker.sentence()
+        doc_positions_list = self._search(query)
+        returned_news = [(self._get_news(doc_id), positions) for doc_id, positions in doc_positions_list]
+        for raw_html, positions in returned_news:
+            title = raw_html.h1.string
+            date = raw_html.sub.string
+            raw_content = raw_html.find_all('p')
+            content = ' '.join([p.string for p in raw_content])
             publisher = self.faker.name()
-            content = " ".join(self.faker.paragraphs(2))
-            bold_token = 0
+            url=self.faker.url()
+            image=self.faker.image_url(width=50, height=50),
+            bold_token = positions[0]
             card = self.ResultCard(title=title,
-                                    url=self.faker.url(),
-                                    image=self.faker.image_url(width=50, height=50),
+                                    url=url,
+                                    image=image,
                                     date=date,
                                     publisher=publisher,
                                     sentiment=0.0, # TODO

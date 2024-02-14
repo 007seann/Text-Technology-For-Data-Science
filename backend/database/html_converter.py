@@ -15,7 +15,6 @@ def save_html():
     for id in doc_ids:
         id = id[0]
 
-
         url = f"http://127.0.0.1:5002/api/news/{id}"
         r = requests.get(url).text
         soup = BeautifulSoup(r, "html.parser")
@@ -27,8 +26,7 @@ def save_html():
 
         with open(f"{folder}news_{id}.html", "w", encoding="utf-8") as f:
             f.write(r)
-        
-            
+           
     
 save_html()
     
