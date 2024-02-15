@@ -35,7 +35,8 @@ class PositionalIndex:
         self.headline_index = {}
         
         # Initialise index
-        if load_from_cache:
+        cache_exists = os.path.exists(POSITIONAL_INDEX_CACHE_PATH)
+        if load_from_cache and cache_exists:
             self.logger.info("Loading index from cache.")
             self.load_from_file()
         else:
