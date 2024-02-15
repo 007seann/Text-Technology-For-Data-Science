@@ -37,6 +37,13 @@ class PostingLinkedList:
     
     def __len__(self):
         return self.length
+
+    # Serialisation support
+    def __getstate__(self):
+        return {'initial_values': self.toList()}
+    
+    def __setstate__(self, state):
+        self.__init__(state['initial_values'])
     
     # Used during intersection operation for phrase and proximity search
     def decrement_postings(self, amount):
