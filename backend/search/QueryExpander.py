@@ -2,6 +2,7 @@ from nltk.corpus import wordnet as wn
 import random
 import spacy
 import sys
+import numpy as np
 sys.path.append('../')
 
 
@@ -20,6 +21,7 @@ class QueryExpander:
         """
         self.nlp = spacy.load("en_core_web_sm")
         self.vsm = vsm
+        self.wordnet_cache = {}
 
     def expand(self, query, mode="prf"):
         """
@@ -70,15 +72,13 @@ class QueryExpander:
         :param top_t: The number of terms to be used. (Default: 5)
         :return: The centroid of the document vectors.
         """
-        centroid = [0] * len(self.vsm.vocab)
+        centroid = np.zeros(len(self.vsm.vocab))
         for doc_vector in doc_vectors_tuple:
             doc_id, _ = doc_vector
-            doc_vector = self.vsm.score_matrix[doc_id]
+            doc_vector = self.vsm.score_matrix[doc_id].toarray().flatten()
+            centroid += doc_vector
             # top_k_terms = self._get_top_t_terms_in_vector(doc_vector, t=top_t)
-            dense_vector = [x for y in doc_vector.toarray().tolist() for x in y]
-            centroid = [c + d for c, d in zip(centroid, dense_vector)]
-        centroid = [c / len(doc_vectors_tuple) for c in centroid]
-        return centroid
+        return centroid / len(doc_vectors_tuple)
     
     def _get_top_t_terms_in_vector(self, vector, t):
         """
@@ -109,19 +109,11 @@ class QueryExpander:
         :return: The expanded query.
         """
         relevant_doc_vectors = returned_vectors[:top_d]
-        dense_query_vector = [x for y in query_vector.toarray().tolist() for x in y]
-        alpha_vector = alpha * dense_query_vector
+        alpha_vector = alpha * query_vector.toarray().flatten()
         beta_vector = beta * self._get_centroid(relevant_doc_vectors, top_t)
-        augmented_query_vector = [a + b for a, b in zip(alpha_vector, beta_vector)]
+        augmented_query_vector = alpha_vector + beta_vector
         if gamma != 0:
             irrelevant_doc_vectors = returned_vectors[-bottom_d:]
-            augmented_query_vector += gamma * self._get_centroid(irrelevant_doc_vectors, bottom_t,)
+            gamma_vector = gamma * self._get_centroid(irrelevant_doc_vectors, bottom_t)
+            augmented_query_vector += gamma_vector
         return augmented_query_vector
-
-
-# if __name__ == "__main__":
-#     documents = ["I want to buy a car", "This is a random document", "I crave a truck"]
-#     query = "I want to buy a vehicle"
-#     vsm = VectorSpaceModel(documents, use_stopping=False, mode='bm25')
-#     query_expander = QueryExpander(vsm)
-#     expanded_query = query_expander.expand(query, mode="syn")
