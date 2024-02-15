@@ -204,7 +204,7 @@ class PositionalIndex:
             'headline_index': self.headline_index
         }
         with open(filename, 'wb') as file:
-            pickle.dump(data, POSITIONAL_INDEX_CACHE_PATH)
+            pickle.dump(data, file)
         self.logger.info(f'Index saved to {filename}')
 
     def load_from_file(self, filename=POSITIONAL_INDEX_CACHE_PATH):
