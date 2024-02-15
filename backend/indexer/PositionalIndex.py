@@ -1,6 +1,7 @@
 import os
 import math
 import logging
+import pickle
 from Crawler import Crawler
 from Tokeniser import Tokeniser
 from nltk.stem import PorterStemmer
@@ -10,11 +11,12 @@ INDEX_SAVE_PATH = "../database/index/index_base.txt"
 CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
 INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), '../database/collection')
 POSITIONAL_INDEX_LOG_PATH = os.path.join(os.path.dirname(__file__), '../log/index.log')
+POSITIONAL_INDEX_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/positional_index.pkl')
 STOPWORDS = "english_stop_words.txt"
 
 class PositionalIndex:
     logging.basicConfig(filename=POSITIONAL_INDEX_LOG_PATH, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-    def __init__(self):   
+    def __init__(self, load_from_cache=True):   
         self.logger = logging.getLogger(self.__class__.__name__) 
                 
         # Stemming and Tokenisation utils
@@ -33,8 +35,13 @@ class PositionalIndex:
         self.headline_index = {}
         
         # Initialise index
-        self.build_index()
-        
+        if load_from_cache:
+            self.logger.info("Loading index from cache.")
+            self.load_from_file()
+        else:
+            self.logger.info("Building index from scratch.")
+            self.build_index()
+            
     def build_index(self):
         """
         Builds the positional index by crawling the web pages, extracting documents, and inserting them into the index.
@@ -57,6 +64,9 @@ class PositionalIndex:
                 doc_dict = self.crawler.html_to_dict(file_path, self.url_to_docid[file_path])
                 
                 self.insert_document(doc_dict)
+        self.logger.info("Index built successfully.")
+        self.save_to_file()
+        self.load_from_file()
     
     def reload_index(self):
         """
@@ -182,51 +192,35 @@ class PositionalIndex:
         else:
             return [token for token in self.tokeniser.tokenise(query)]
     
-    def reset_index(self):
-        self.index = {}
-        self.document_ids = set()
-        self.vocabulary = set()
-        self.vocabulary_size = 0
-        
-    def save_index(self, save_path=INDEX_SAVE_PATH):
-        sorted_vocabulary = sorted(self.vocabulary)
-        with open(save_path, 'w') as file:
-            for term in sorted_vocabulary:
-                (doc_freq, doc_dict) = self.index[term]
-                file.write(term + ":" + str(doc_freq) + "\n")
-                doc_list = sorted(doc_dict.keys())
-                for doc_id in doc_list:
-                    posting_string = ",".join(map(str, doc_dict[doc_id].toList()))
-                    file.write("\t" + doc_id + ":" + posting_string + "\n")
-                
-    def load_index(self, load_path=INDEX_SAVE_PATH):
-        self.vocabulary_size = 0
-        self.vocabulary = set()
-        self.index = {}
-        
-        with open(load_path, 'r') as file:
-            lines = file.readlines()
-            current_word = None
-            doc_freq = None
-            doc_posting_pairs = {}
-            for line in lines:
-                if not line.startswith('\t'):
-                    if current_word:
-                        self.index[current_word] = (int(doc_freq), doc_posting_pairs)
-                        self.vocabulary.add(current_word)
-                        self.vocabulary_size += 1
-                        
-                    word, doc_freq = line.split(":")
-                    current_word = word
-                    doc_posting_pairs = {}
-                else:
-                    doc_id, positions = line.strip().split(':')
-                    doc_posting_pairs[doc_id] = PostingLinkedList(list(map(int, positions.split(','))))
-                    self.document_ids.add(doc_id)
-                    
-            self.index[current_word] = (int(doc_freq), doc_posting_pairs)
-            self.vocabulary.add(current_word)
-            self.vocabulary_size += 1
+    def save_to_file(self, filename=POSITIONAL_INDEX_CACHE_PATH):
+        data = {
+            'url_to_docid': self.url_to_docid,
+            'docid_to_url': self.docid_to_url,
+            'index': self.index,
+            'document_ids': self.document_ids,
+            'vocabulary': self.vocabulary,
+            'vocabulary_size': self.vocabulary_size,
+            'headline_index': self.headline_index
+        }
+        with open(filename, 'wb') as file:
+            pickle.dump(data, POSITIONAL_INDEX_CACHE_PATH)
+        self.logger.info(f'Index saved to {filename}')
+
+    def load_from_file(self, filename=POSITIONAL_INDEX_CACHE_PATH):
+        try:
+            with open(filename, 'rb') as file:
+                data = pickle.load(file)
+            self.url_to_docid = data['url_to_docid']
+            self.docid_to_url = data['docid_to_url']
+            self.index = data['index']
+            self.document_ids = data['document_ids']
+            self.vocabulary = data['vocabulary']
+            self.vocabulary_size = data['vocabulary_size']
+            self.headline_index = data['headline_index']
+            self.logger.info(f'Index loaded from {filename}')
+        except FileNotFoundError:
+            self.logger.error(f'File {filename} not found. Building index from scratch.')
+            self.build_index()
             
     def search_and(self, search_query, include_positions=False):
         tokenised_terms = self.extract_tokens(search_query)
