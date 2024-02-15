@@ -4,11 +4,13 @@ import sys
 sys.path.append('./backend')
 from indexer.Tokeniser import Tokeniser
 from indexer.Crawler import Crawler
+from search.QueryExpander import QueryExpander
 import scipy.sparse as sp
 import time
 import pickle
 import os
 import logging
+from sklearn.metrics.pairwise import cosine_similarity
 
 INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), '../database/collection')
 CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
@@ -256,40 +258,59 @@ class VectorSpaceModel:
 
     def calculate_vector_similarity(self, query_vector):
         """
-        Returns the similarity of the query vector with the document vectors.
+        Returns the cosine similarity of the query vector with the document vectors.
         :param query_vector: The query vector.
         :return: The similarity of the query vector with the document vectors.
         """
-        similarity = np.dot(self.score_matrix, query_vector).toarray().flatten()
+        similarity = cosine_similarity(self.score_matrix, query_vector.T)
         return sorted(enumerate(similarity), key=lambda x: x[1], reverse=True)
-    
+
     def process_query(self, query, top=10):
         """
         Returns the documents that contain the query.
         :param query: The query.
         :return: The documents that contain the query.
         """
+        start = time.time()
         query_vector = self.get_query_vector(query)
+        end = time.time()
+        print("Query Vectorisation time: ", end - start)
+
+        start = time.time()
         similarity = self.calculate_vector_similarity(query_vector)[:top]
+        end = time.time()
+        print("Query time: ", end - start)
+        doc_id_positions = [(doc_id, []) for doc_id, _ in similarity]
+        return doc_id_positions
+    
+    def process_expanded_query(self, expanded_query_vector):
+        """
+        Returns the documents that contain the expanded query.
+        :param expanded_query_vector: The expanded query vector.
+        :return: The documents that contain the expanded query.
+        """
+        start = time.time()
+        similarity = self.calculate_vector_similarity(expanded_query_vector)
+        end = time.time()
+        print("Expanded Query time: ", end - start)
         doc_id_positions = [(doc_id, []) for doc_id, _ in similarity]
         return doc_id_positions
 
-# if __name__ == '__main__':
-#     with open('./backend/utils/test_documents.txt', 'r') as file:
-#         documents = file.readlines()
-#     query = "God resting on seventh day"
+if __name__ == '__main__':
+    with open('./backend/utils/test_documents.txt', 'r') as file:
+        documents = file.readlines()
+    query = "god rest seventh day"
 
-#     # vsm = VectorSpaceModel(documents, use_stopping=False, use_stemming=False, mode='bm25')
-#     # pickle.dump(vsm, open('./backend/utils/test_vsm_bm25.pkl', 'wb'))
-#     vsm = pickle.load(open('./backend/utils/test_vsm_bm25.pkl', 'rb'))
+    # vsm = VectorSpaceModel(documents, use_stopping=False, use_stemming=False, mode='bm25')
+    # pickle.dump(vsm, open('./backend/utils/test_vsm_bm25.pkl', 'wb'))
+    vsm = pickle.load(open('./backend/utils/test_vsm_bm25.pkl', 'rb'))
+    qe = QueryExpander(vsm)
 
-#     start = time.time()
-#     query_vector = vsm.get_query_vector(query)
-#     end = time.time()
-#     print("Query Vectorisation time: ", end - start)
+    top_10_results_before = vsm.process_query(query)[:10]
+    print(top_10_results_before)
 
-#     start = time.time()
-#     similarity = vsm.calculate_vector_similarity(query_vector)
-#     end = time.time()
-#     print("Query time: ", end - start)
-#     print(similarity[:10])
+    expanded_query = qe.expand(query)
+    expanded_query_vector = sp.csr_matrix(expanded_query, shape=(1, len(vsm.vocab))).T
+    
+    top_10_results_after = vsm.process_expanded_query(expanded_query_vector)[:10]
+    print(top_10_results_after)

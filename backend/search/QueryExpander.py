@@ -3,7 +3,6 @@ import random
 import spacy
 import sys
 sys.path.append('../')
-from utils.VectorSpaceModel import VectorSpaceModel
 
 
 class QueryExpander:
@@ -28,16 +27,11 @@ class QueryExpander:
         :param query: The query to be expanded.
         :return: The expanded query.
         """
-        case = {
-            "syn": self._syn_expand,
-            "prf": self._prf_expand
-        }
         if mode == "prf":
             query_vector = self.vsm.get_query_vector(query)
-            print("Old query: ", [x for y in query_vector.toarray().tolist() for x in y])
             returned_vectors = self.vsm.calculate_vector_similarity(query_vector)
-            return case[mode](query_vector, returned_vectors)
-        return case[mode](query)
+            return self._prf_expand(query_vector, returned_vectors)
+        return self._syn_expand(query)
         
     def _syn_expand(self, query, words_to_replace=3):
         """
@@ -69,20 +63,21 @@ class QueryExpander:
         return new_query
 
     def _get_centroid(self, doc_vectors_tuple, top_t):
+        # TODO: Fix
         """
         Calculates the centroid of a list of document vectors.
         :param doc_vectors: The list of document vectors.
         :param top_t: The number of terms to be used. (Default: 5)
         :return: The centroid of the document vectors.
         """
-        centroid = [0 for _ in range(len(doc_vectors_tuple))]
+        centroid = [0] * len(self.vsm.vocab)
         for doc_vector in doc_vectors_tuple:
             doc_id, _ = doc_vector
             doc_vector = self.vsm.score_matrix[doc_id]
             # top_k_terms = self._get_top_t_terms_in_vector(doc_vector, t=top_t)
             dense_vector = [x for y in doc_vector.toarray().tolist() for x in y]
-            centroid = [centroid[i] + dense_vector[i] for i in range(len(doc_vectors_tuple))]
-        centroid = [score / len(doc_vectors_tuple) for score in centroid]
+            centroid = [c + d for c, d in zip(centroid, dense_vector)]
+        centroid = [c / len(doc_vectors_tuple) for c in centroid]
         return centroid
     
     def _get_top_t_terms_in_vector(self, vector, t):
@@ -97,7 +92,7 @@ class QueryExpander:
         sorted_vector = sorted(doc_vector, key=lambda x: x, reverse=True)
         return sorted_vector[:t]
 
-    def _prf_expand(self, query_vector, returned_vectors, top_d=1, top_t=5, bottom_d=1, bottom_t=-5, alpha=1, beta=1, gamma=0):
+    def _prf_expand(self, query_vector, returned_vectors, top_d=5, top_t=5, bottom_d=1, bottom_t=-5, alpha=1, beta=1, gamma=0):
         """
         Expands a query with pseudo relevance feedback.
         :param query_vector: The query to be expanded.
@@ -115,16 +110,18 @@ class QueryExpander:
         """
         relevant_doc_vectors = returned_vectors[:top_d]
         dense_query_vector = [x for y in query_vector.toarray().tolist() for x in y]
-        augmented_query_vector = alpha * dense_query_vector + beta * self._get_centroid(relevant_doc_vectors, top_d)
-        if gamma:
+        alpha_vector = alpha * dense_query_vector
+        beta_vector = beta * self._get_centroid(relevant_doc_vectors, top_t)
+        augmented_query_vector = [a + b for a, b in zip(alpha_vector, beta_vector)]
+        if gamma != 0:
             irrelevant_doc_vectors = returned_vectors[-bottom_d:]
             augmented_query_vector += gamma * self._get_centroid(irrelevant_doc_vectors, bottom_t,)
         return augmented_query_vector
 
 
-if __name__ == "__main__":
-    documents = ["I want to buy a car", "This is a random document", "I crave a truck"]
-    query = "I want to buy a vehicle"
-    vsm = VectorSpaceModel(documents, use_stopping=False, mode='bm25')
-    query_expander = QueryExpander(vsm)
-    expanded_query = query_expander.expand(query, mode="syn")
+# if __name__ == "__main__":
+#     documents = ["I want to buy a car", "This is a random document", "I crave a truck"]
+#     query = "I want to buy a vehicle"
+#     vsm = VectorSpaceModel(documents, use_stopping=False, mode='bm25')
+#     query_expander = QueryExpander(vsm)
+#     expanded_query = query_expander.expand(query, mode="syn")
