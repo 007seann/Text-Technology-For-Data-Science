@@ -16,20 +16,27 @@ sys.path.append('./')
 from backend.search.SearchRetriever import SearchRetriever
 from backend.indexer.PositionalIndex import PositionalIndex
 from backend.utils.SpellChecker import SpellChecker
+from backend.utils.VectorSpaceModel import VectorSpaceModel
 
 
-# Load indexer
+# # Load indexer
+# @st.cache_resource
+# def indexer_resource():
+#     return PositionalIndex()
+# indexer = indexer_resource()
+
+# Load VSM
 @st.cache_resource
-def indexer_resource():
-    return PositionalIndex()
-indexer = indexer_resource()
+def vsm_resource():
+    return VectorSpaceModel(mode='bm25')
+vsm = vsm_resource()
 
 @st.cache_resource
 def spell_checker_resource():
     return SpellChecker(use_secondary=True)
 spell_checker = spell_checker_resource()
 
-search_retriever = SearchRetriever(indexer)
+search_retriever = SearchRetriever(vsm)
 
 @dataclass
 class SearchResult:

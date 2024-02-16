@@ -3,9 +3,18 @@ import math
 import sys
 sys.path.append('./backend')
 from indexer.Tokeniser import Tokeniser
+from indexer.Crawler import Crawler
+from search.QueryExpander import QueryExpander
 import scipy.sparse as sp
 import time
 import pickle
+import os
+import logging
+from sklearn.metrics.pairwise import cosine_similarity
+
+INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), '../database/collection')
+CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
+VSM_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/vsm_cache.pkl')
 
 class VectorSpaceModel:
     """
@@ -14,46 +23,120 @@ class VectorSpaceModel:
         Use stopping (i.e., remove English stop words such as 'and', 'or', and 'but')
         Use different modes of calculation (i.e., tf-idf, bm25)
     """
-    def __init__(self, documents, use_stopping=False, use_stemming=False, punctuations_to_keep=[], mode='tfidf'):
+    def __init__(self, include_subsections=False, use_stopping=False, use_stemming=False, punctuations_to_keep=[], mode='tfidf'):
         """
         Initialise the VectorSpaceModel class
         documents: list[str]    List of documents to perform vector space model calculations on
         use_stopping: Boolean   If true, remove stop words.
         mode: str               Mode of calculation (i.e., tf-idf, bm25)
         """
+        # Initialise data structures
         self.mode = mode
+        self.crawler = Crawler(INDEX_BASE_DIR, CRAWL_CACHE_PATH)
+        self.documents = []
+        self.url_to_docid = {}
+        self.docid_to_url = {}
+        self.documents = []
+        self.logger = logging.getLogger(self.__class__.__name__) 
+        self.get_documents(include_subsections=include_subsections)
 
+        # Tokenise the documents
         self.tokeniser = Tokeniser(use_stopping=use_stopping, use_stemming=use_stemming, punctuations_to_keep=punctuations_to_keep)
         start = time.time()
-        self.tokenised_documents = [self.tokeniser.tokenise(document) for document in documents]
+        self.tokenised_documents = [self.tokeniser.tokenise(document) for document in self.documents]
         end = time.time()
-        print("Tokenisation time: ", end - start)
+        self.logger.info(f"Tokenisation time: {end - start}")
 
+        # Pre-compute constants
         self.N = len(self.tokenised_documents)
         self.L_bar = sum([len(document) for document in self.tokenised_documents]) / self.N
         
+        # Make Vocabulary
         # Vocabulary of the form {token: token_id}
         self.vocab = self.make_vocab()
 
+        # Count Matrix
         # Inverted Index of the form {token: {doc_id: count}} (Sparse Matrix)
         start = time.time()
         self.count_matrix = self.make_count_matrix()
         end = time.time()
-        print("Count Matrix time: ", end - start)
+        self.logger.info(f"Count Matrix time: {end - start}")
 
         # Pre-compute the inverse document frequency for each token
         start = time.time()
         self.precompute_idf()
         end = time.time()
-        print("IDF Precomputation time: ", end - start)
+        self.logger.info(f"IDF time: {end - start}")
 
         # Score Matrix of the form {doc_id: {token: score}} (Sparse Matrix)
         start = time.time()
         self.score_matrix = self.make_score_matrix()
         end = time.time()
-        print("Score Matrix time: ", end - start)
+        self.logger.info(f"Score Matrix time: {end - start}")
+
+    def save_to_file(self, filename=VSM_CACHE_PATH):
+        """
+        Save the VectorSpaceModel to a file.
+        """
+        data = {
+            'url_to_docid': self.url_to_docid,
+            'docid_to_url': self.docid_to_url,
+            'documents': self.documents,
+            'tokenised_documents': self.tokenised_documents,
+            'vocab': self.vocab,
+            'count_matrix': self.count_matrix,
+            'idf': self.idf,
+            'score_matrix': self.score_matrix
+        }
+        with open(filename, 'wb') as file:
+            pickle.dump(data, file)
+        self.logger.info(f"Saved VectorSpaceModel to {filename}")
+
+    def load_from_file(self, filename=VSM_CACHE_PATH):
+        """
+        Load the VectorSpaceModel from a file.
+        """
+        try:
+            with open(filename, 'rb') as file:
+                data = pickle.load(file)
+            self.url_to_docid = data['url_to_docid']
+            self.docid_to_url = data['docid_to_url']
+            self.documents = data['documents']
+            self.tokenised_documents = data['tokenised_documents']
+            self.vocab = data['vocab']
+            self.count_matrix = data['count_matrix']
+            self.idf = data['idf']
+            self.score_matrix = data['score_matrix']
+            self.logger.info(f"Loaded VectorSpaceModel from {filename}")
+        except FileNotFoundError:
+            self.logger.error(f"File {filename} not found. Building VectorSpaceModel from scratch.")
+            self.__init__()
+
+    def get_documents(self, include_subsections=False):
+        """
+        Get the documents from the crawler and store them in the documents list.
+        """
+        self.crawler.load_cache()
+        crawler_url_cache = self.crawler.cache # {url: checksum}
+        if not crawler_url_cache:
+            self.logger.info("No files found in the base directories.")
+            raise Exception("No files found in the base directories.")
+        for file_path, _ in crawler_url_cache.items():
+            if file_path not in self.url_to_docid:
+                self.logger.info(f"Processing file: {file_path}")
+                self.url_to_docid[file_path] = len(self.url_to_docid)
+                self.docid_to_url[len(self.url_to_docid)] = file_path
+                doc_dict = self.crawler.html_to_dict(file_path, self.url_to_docid[file_path])
+                raw_text = doc_dict.get('HEADLINE', "") + " " + doc_dict.get('TEXT', "")
+                if include_subsections:
+                    for tag in ["PROFILE", "DATE", "BYLINE", "DATELINE", "PUB", "PAGE"]:
+                        raw_text += doc_dict.get(tag, "")
+                self.documents.append(raw_text)
 
     def make_vocab(self):
+        """
+        Returns the vocabulary of the documents.
+        """
         vocab = set()
         for tokenised_document in self.tokenised_documents:
             vocab.update(tokenised_document)
@@ -79,8 +162,11 @@ class VectorSpaceModel:
         return count_matrix
     
     def precompute_idf(self):
-        # Pre-compute the inverse document frequency for each token (Only for TFIDF)
-        # len(self.count_matrix[token_id]) returns the document frequency of the token (TODO Can this be optimised further?)
+        """
+        Pre-compute the inverse document frequency for each token.
+        """
+        # len(self.count_matrix[token_id]) returns the document frequency of the token 
+        # TODO Can this be optimised further?
         if self.mode == 'tfidf':
             self.idf = {token: self.calculate_idf(len(self.count_matrix[token_id]), mode='t') for token, token_id in self.vocab.items()}
         elif self.mode == 'bm25':
@@ -211,29 +297,30 @@ class VectorSpaceModel:
 
     def calculate_vector_similarity(self, query_vector):
         """
-        Returns the similarity of the query vector with the document vectors.
+        Returns the cosine similarity of the query vector with the document vectors.
         :param query_vector: The query vector.
         :return: The similarity of the query vector with the document vectors.
         """
-        similarity = np.dot(self.score_matrix, query_vector).toarray().flatten()
+        similarity = cosine_similarity(self.score_matrix, query_vector.T)
         return sorted(enumerate(similarity), key=lambda x: x[1], reverse=True)
 
-if __name__ == '__main__':
-    with open('./backend/utils/test_documents.txt', 'r') as file:
-        documents = file.readlines()
-    query = "God resting on seventh day"
+    def process_query(self, query, top=10, is_expanded=False):
+        """
+        Returns the documents that contain the query.
+        :param query: The query.
+        :return: The documents that contain the query.
+        """
+        start = time.time()
+        if is_expanded:
+            query_vector = sp.csr_matrix(query, shape=(1, len(self.vocab))).T
+        else:
+            query_vector = self.get_query_vector(query)
+        end = time.time()
+        self.logger.info("Query Vectorisation time: ", end - start)
 
-    # vsm = VectorSpaceModel(documents, use_stopping=False, use_stemming=False, mode='bm25')
-    # pickle.dump(vsm, open('./backend/utils/test_vsm_bm25.pkl', 'wb'))
-    vsm = pickle.load(open('./backend/utils/test_vsm_bm25.pkl', 'rb'))
-
-    start = time.time()
-    query_vector = vsm.get_query_vector(query)
-    end = time.time()
-    print("Query Vectorisation time: ", end - start)
-
-    start = time.time()
-    similarity = vsm.calculate_vector_similarity(query_vector)
-    end = time.time()
-    print("Query time: ", end - start)
-    print(similarity[:10])
+        start = time.time()
+        similarity = self.calculate_vector_similarity(query_vector)[:top]
+        end = time.time()
+        self.logger.info("Query time: ", end - start)
+        doc_id_positions = [(doc_id, []) for doc_id, _ in similarity]
+        return doc_id_positions

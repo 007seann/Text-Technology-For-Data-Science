@@ -57,7 +57,7 @@ class SearchRetriever:
             publisher = self.faker.name()
             url=self.faker.url()
             image=self.faker.image_url(width=50, height=50),
-            bold_token = positions[0]
+            bold_token = 0
             relevant_content = self._get_relevant_content(content, bold_token)
             card = self.ResultCard(title=title,
                                     url=url,
