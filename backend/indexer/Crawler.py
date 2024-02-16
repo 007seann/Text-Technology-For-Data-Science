@@ -44,14 +44,19 @@ class Crawler:
             if not self.cache:
                 self.logger.info("No files found in the base directories.")
                 raise Exception("No files found in the base directories.")
+            
             if index_changed:
-                
                 self.logger.info("Index changed, updating cache...")
                 self.logger.info(f"Current cache size: {len(self.cache)}")
                 self.logger.info(f"Updated files size: {len(self.updated_stack)}")
-                
                 self.save_cache()
-        
+    
+            # Sanity check for non-existent files
+            self.logger.info("Sanity check for non-existent files...")
+            for file_path in list(self.cache.keys()):
+                if not os.path.exists(file_path):
+                    self.logger.info(f"File not found: {file_path}")
+                    del self.cache[file_path]
         
     def get_check_sum(self, file_path, algorithm='sha256'):
             """

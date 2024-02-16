@@ -43,7 +43,7 @@ class SearchRetriever:
             left_window = bold_token
         if len(split_content) - bold_token < right_window:
             right_window = len(split_content) - bold_token
-        return "...{}...".format(split_content[bold_token-left_window:bold_token+right_window])
+        return "...{}...".format(' '.join(split_content[bold_token-left_window:bold_token+right_window]).strip())
     
     def get_results(self, query):
         result_cards = []
