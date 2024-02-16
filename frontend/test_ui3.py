@@ -19,24 +19,24 @@ from backend.utils.SpellChecker import SpellChecker
 from backend.utils.VectorSpaceModel import VectorSpaceModel
 
 
-# # Load indexer
-# @st.cache_resource
-# def indexer_resource():
-#     return PositionalIndex()
-# indexer = indexer_resource()
-
-# Load VSM
+# Load indexer
 @st.cache_resource
-def vsm_resource():
-    return VectorSpaceModel(mode='bm25')
-vsm = vsm_resource()
+def indexer_resource():
+    return PositionalIndex()
+indexer = indexer_resource()
+
+# # Load VSM
+# @st.cache_resource
+# def vsm_resource():
+#     return VectorSpaceModel(mode='bm25')
+# vsm = vsm_resource()
 
 @st.cache_resource
 def spell_checker_resource():
     return SpellChecker(use_secondary=True)
 spell_checker = spell_checker_resource()
 
-search_retriever = SearchRetriever(vsm)
+search_retriever = SearchRetriever(indexer)
 
 @dataclass
 class SearchResult:

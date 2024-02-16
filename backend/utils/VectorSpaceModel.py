@@ -23,7 +23,7 @@ class VectorSpaceModel:
         Use stopping (i.e., remove English stop words such as 'and', 'or', and 'but')
         Use different modes of calculation (i.e., tf-idf, bm25)
     """
-    def __init__(self, include_subsections=False, use_stopping=False, use_stemming=False, punctuations_to_keep=[], mode='tfidf'):
+    def __init__(self, mode='tfidf'):
         """
         Initialise the VectorSpaceModel class
         documents: list[str]    List of documents to perform vector space model calculations on
@@ -38,41 +38,15 @@ class VectorSpaceModel:
         self.docid_to_url = {}
         self.documents = []
         self.logger = logging.getLogger(self.__class__.__name__) 
-        self.get_documents(include_subsections=include_subsections)
-
-        # Tokenise the documents
-        self.tokeniser = Tokeniser(use_stopping=use_stopping, use_stemming=use_stemming, punctuations_to_keep=punctuations_to_keep)
-        start = time.time()
-        self.tokenised_documents = [self.tokeniser.tokenise(document) for document in self.documents]
-        end = time.time()
-        self.logger.info(f"Tokenisation time: {end - start}")
-
-        # Pre-compute constants
-        self.N = len(self.tokenised_documents)
-        self.L_bar = sum([len(document) for document in self.tokenised_documents]) / self.N
         
-        # Make Vocabulary
-        # Vocabulary of the form {token: token_id}
-        self.vocab = self.make_vocab()
-
-        # Count Matrix
-        # Inverted Index of the form {token: {doc_id: count}} (Sparse Matrix)
-        start = time.time()
-        self.count_matrix = self.make_count_matrix()
-        end = time.time()
-        self.logger.info(f"Count Matrix time: {end - start}")
-
-        # Pre-compute the inverse document frequency for each token
-        start = time.time()
-        self.precompute_idf()
-        end = time.time()
-        self.logger.info(f"IDF time: {end - start}")
-
-        # Score Matrix of the form {doc_id: {token: score}} (Sparse Matrix)
-        start = time.time()
-        self.score_matrix = self.make_score_matrix()
-        end = time.time()
-        self.logger.info(f"Score Matrix time: {end - start}")
+        # Initialise VSM
+        cache_exists = os.path.exists(VSM_CACHE_PATH)
+        if cache_exists:
+            self.logger.info("Loading VSM from cache.")
+            self.load_from_file()
+        else:
+            self.logger.info("Building VSM from scratch.")
+            self.build_vsm()
 
     def save_to_file(self, filename=VSM_CACHE_PATH):
         """
@@ -112,6 +86,36 @@ class VectorSpaceModel:
             self.logger.error(f"File {filename} not found. Building VectorSpaceModel from scratch.")
             self.__init__()
 
+    def build_vsm(self):
+        self.retrieve_and_tokenise_documents()
+
+        self.precompute_constants()
+        
+        # Make Vocabulary
+        # Vocabulary of the form {token: token_id}
+        self.vocab = self.make_vocab()
+
+        # Count Matrix
+        # Inverted Index of the form {token: {doc_id: count}} (Sparse Matrix)
+        start = time.time()
+        self.count_matrix = self.make_count_matrix()
+        end = time.time()
+        self.logger.info(f"Count Matrix time: {end - start}")
+
+        # Pre-compute the inverse document frequency for each token
+        start = time.time()
+        self.precompute_idf()
+        end = time.time()
+        self.logger.info(f"IDF time: {end - start}")
+
+        # Score Matrix of the form {doc_id: {token: score}} (Sparse Matrix)
+        start = time.time()
+        self.score_matrix = self.make_score_matrix()
+        end = time.time()
+        self.logger.info(f"Score Matrix time: {end - start}")
+
+        self.save_to_file()
+
     def get_documents(self, include_subsections=False):
         """
         Get the documents from the crawler and store them in the documents list.
@@ -132,6 +136,20 @@ class VectorSpaceModel:
                     for tag in ["PROFILE", "DATE", "BYLINE", "DATELINE", "PUB", "PAGE"]:
                         raw_text += doc_dict.get(tag, "")
                 self.documents.append(raw_text)
+
+    def retrieve_and_tokenise_documents(self, include_subsections=False, use_stopping=False, use_stemming=False, punctuations_to_keep=[]):
+        # Retrieve and tokenise the documents
+        self.get_documents(include_subsections=include_subsections)
+        self.tokeniser = Tokeniser(use_stopping=use_stopping, use_stemming=use_stemming, punctuations_to_keep=punctuations_to_keep)
+        start = time.time()
+        self.tokenised_documents = [self.tokeniser.tokenise(document) for document in self.documents]
+        end = time.time()
+        self.logger.info(f"Tokenisation time: {end - start}")
+
+    def precompute_constants(self):
+        # Pre-compute constants
+        self.N = len(self.tokenised_documents)
+        self.L_bar = sum([len(document) for document in self.tokenised_documents]) / self.N
 
     def make_vocab(self):
         """
@@ -316,11 +334,11 @@ class VectorSpaceModel:
         else:
             query_vector = self.get_query_vector(query)
         end = time.time()
-        self.logger.info("Query Vectorisation time: ", end - start)
+        self.logger.info(f"Query Vectorisation time: {end-start}")
 
         start = time.time()
         similarity = self.calculate_vector_similarity(query_vector)[:top]
         end = time.time()
-        self.logger.info("Query time: ", end - start)
+        self.logger.info(f"Query time: {end-start}")
         doc_id_positions = [(doc_id, []) for doc_id, _ in similarity]
         return doc_id_positions
