@@ -7,8 +7,15 @@ app = Flask(__name__)
 
 
 def create_conn(hostname):
-    conn = psycopg2.connect(database="postgres", user="postgres", 
-                            password="12345", host=hostname, port="5432") 
+    conn = psycopg2.connect(database="postgres", 
+                            user="postgres", 
+                            password="12345", 
+                            host=hostname, 
+                            port="5432",
+                            keepalives=1,
+                            keepalives_idle=30,
+                            keepalives_interval=10,
+                            keepalives_count=5) 
     curr = conn.cursor()
     return curr, conn
 
