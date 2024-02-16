@@ -14,6 +14,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), '../database/collection')
 CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
+VSM_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/vsm_cache.pkl')
 
 class VectorSpaceModel:
     """
@@ -72,6 +73,44 @@ class VectorSpaceModel:
         self.score_matrix = self.make_score_matrix()
         end = time.time()
         self.logger.info(f"Score Matrix time: {end - start}")
+
+    def save_to_file(self, filename=VSM_CACHE_PATH):
+        """
+        Save the VectorSpaceModel to a file.
+        """
+        data = {
+            'url_to_docid': self.url_to_docid,
+            'docid_to_url': self.docid_to_url,
+            'documents': self.documents,
+            'tokenised_documents': self.tokenised_documents,
+            'vocab': self.vocab,
+            'count_matrix': self.count_matrix,
+            'idf': self.idf,
+            'score_matrix': self.score_matrix
+        }
+        with open(filename, 'wb') as file:
+            pickle.dump(data, file)
+        self.logger.info(f"Saved VectorSpaceModel to {filename}")
+
+    def load_from_file(self, filename=VSM_CACHE_PATH):
+        """
+        Load the VectorSpaceModel from a file.
+        """
+        try:
+            with open(filename, 'rb') as file:
+                data = pickle.load(file)
+            self.url_to_docid = data['url_to_docid']
+            self.docid_to_url = data['docid_to_url']
+            self.documents = data['documents']
+            self.tokenised_documents = data['tokenised_documents']
+            self.vocab = data['vocab']
+            self.count_matrix = data['count_matrix']
+            self.idf = data['idf']
+            self.score_matrix = data['score_matrix']
+            self.logger.info(f"Loaded VectorSpaceModel from {filename}")
+        except FileNotFoundError:
+            self.logger.error(f"File {filename} not found. Building VectorSpaceModel from scratch.")
+            self.__init__()
 
     def get_documents(self, include_subsections=False):
         """
@@ -265,52 +304,23 @@ class VectorSpaceModel:
         similarity = cosine_similarity(self.score_matrix, query_vector.T)
         return sorted(enumerate(similarity), key=lambda x: x[1], reverse=True)
 
-    def process_query(self, query, top=10):
+    def process_query(self, query, top=10, is_expanded=False):
         """
         Returns the documents that contain the query.
         :param query: The query.
         :return: The documents that contain the query.
         """
         start = time.time()
-        query_vector = self.get_query_vector(query)
+        if is_expanded:
+            query_vector = sp.csr_matrix(query, shape=(1, len(self.vocab))).T
+        else:
+            query_vector = self.get_query_vector(query)
         end = time.time()
-        print("Query Vectorisation time: ", end - start)
+        self.logger.info("Query Vectorisation time: ", end - start)
 
         start = time.time()
         similarity = self.calculate_vector_similarity(query_vector)[:top]
         end = time.time()
-        print("Query time: ", end - start)
+        self.logger.info("Query time: ", end - start)
         doc_id_positions = [(doc_id, []) for doc_id, _ in similarity]
         return doc_id_positions
-    
-    def process_expanded_query(self, expanded_query_vector):
-        """
-        Returns the documents that contain the expanded query.
-        :param expanded_query_vector: The expanded query vector.
-        :return: The documents that contain the expanded query.
-        """
-        start = time.time()
-        similarity = self.calculate_vector_similarity(expanded_query_vector)
-        end = time.time()
-        print("Expanded Query time: ", end - start)
-        doc_id_positions = [(doc_id, []) for doc_id, _ in similarity]
-        return doc_id_positions
-
-if __name__ == '__main__':
-    with open('./backend/utils/test_documents.txt', 'r') as file:
-        documents = file.readlines()
-    query = "god rest seventh day"
-
-    # vsm = VectorSpaceModel(documents, use_stopping=False, use_stemming=False, mode='bm25')
-    # pickle.dump(vsm, open('./backend/utils/test_vsm_bm25.pkl', 'wb'))
-    vsm = pickle.load(open('./backend/utils/test_vsm_bm25.pkl', 'rb'))
-    qe = QueryExpander(vsm)
-
-    top_10_results_before = vsm.process_query(query)[:10]
-    print(top_10_results_before)
-
-    expanded_query = qe.expand(query)
-    expanded_query_vector = sp.csr_matrix(expanded_query, shape=(1, len(vsm.vocab))).T
-    
-    top_10_results_after = vsm.process_expanded_query(expanded_query_vector)[:10]
-    print(top_10_results_after)
