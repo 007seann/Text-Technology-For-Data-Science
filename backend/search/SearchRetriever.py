@@ -51,13 +51,13 @@ class SearchRetriever:
         returned_news = [(self._get_news(doc_id), positions) for doc_id, positions in doc_positions_list]
         for raw_html, positions in returned_news:
             title = raw_html.h1.string
-            date = raw_html.sub.string
+            date = raw_html.sub.string.replace("Published ", "")[:10]
             raw_content = raw_html.find_all('p')
             content = ' '.join([p.string for p in raw_content])
-            publisher = self.faker.name()
-            url=self.faker.url()
+            publisher = raw_html.h3.string.replace("Publication outlet: ", "")
+            url=raw_html.find('meta', id='url')['content']
             image=self.faker.image_url(width=50, height=50),
-            bold_token = 0
+            bold_token = 0 if positions == [] else positions[0]
             relevant_content = self._get_relevant_content(content, bold_token)
             card = self.ResultCard(title=title,
                                     url=url,

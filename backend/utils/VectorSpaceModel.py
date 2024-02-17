@@ -2,9 +2,9 @@ import numpy as np
 import math
 import sys
 sys.path.append('./backend')
-from indexer.Tokeniser import Tokeniser
-from indexer.Crawler import Crawler
-from search.QueryExpander import QueryExpander
+from Tokeniser import Tokeniser
+from Crawler import Crawler
+from QueryExpander import QueryExpander
 import scipy.sparse as sp
 import time
 import pickle
@@ -73,6 +73,7 @@ class VectorSpaceModel:
         try:
             with open(filename, 'rb') as file:
                 data = pickle.load(file)
+            self.tokeniser = Tokeniser()
             self.url_to_docid = data['url_to_docid']
             self.docid_to_url = data['docid_to_url']
             self.documents = data['documents']
@@ -129,7 +130,7 @@ class VectorSpaceModel:
             if file_path not in self.url_to_docid:
                 self.logger.info(f"Processing file: {file_path}")
                 self.url_to_docid[file_path] = len(self.url_to_docid)
-                self.docid_to_url[len(self.url_to_docid)] = file_path
+                self.docid_to_url[len(self.url_to_docid)-1] = file_path
                 doc_dict = self.crawler.html_to_dict(file_path, self.url_to_docid[file_path])
                 raw_text = doc_dict.get('HEADLINE', "") + " " + doc_dict.get('TEXT', "")
                 if include_subsections:

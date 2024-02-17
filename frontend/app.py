@@ -1,12 +1,18 @@
 import sys
 sys.path.append("./")
+sys.path.append("../")
+sys.path.append("../backend/indexer/")
+sys.path.append("../backend/utils/")
+sys.path.append("../backend/search/")
 from backend.search.SearchRetriever import SearchRetriever
 from backend.indexer.PositionalIndex import PositionalIndex
+from backend.utils.VectorSpaceModel import VectorSpaceModel
 from flask import Flask, render_template, request
 # from flask_paginate import Pagination, get_page_parameter
 app = Flask(__name__)
 
 indexer = PositionalIndex()
+# indexer = VectorSpaceModel()
 search_retriever = SearchRetriever(indexer)
 
 @app.route('/')
@@ -42,6 +48,4 @@ def search():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5002, use_reloader=False)
-    # app.run(host='192.168.0.48', port=5000, debug=True, threaded=False)
-    #app.run(host='172.20.183.177', port=5000, debug=True, threaded=False)
+    app.run(host='0.0.0.0', debug=False, port=5002, use_reloader=False)

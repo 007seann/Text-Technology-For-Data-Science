@@ -61,9 +61,8 @@ class PositionalIndex:
                 self.logger.info(f"Processing file: {file_path}")
 
                 self.url_to_docid[file_path] = len(self.url_to_docid)
-                self.docid_to_url[len(self.url_to_docid)] = file_path
+                self.docid_to_url[len(self.url_to_docid)-1] = file_path
                 doc_dict = self.crawler.html_to_dict(file_path, self.url_to_docid[file_path])
-                
                 self.insert_document(doc_dict)
         self.logger.info("Index built successfully.")
         self.save_to_file()
@@ -463,3 +462,10 @@ class PositionalIndex:
             return self.search_phrase(phrase, include_positions=True)
         else:
             return self.search_and(query, include_positions=True)
+
+
+if __name__ == '__main__':
+    p = PositionalIndex()
+    for t, idx in p.index.items():
+        print(t, idx)
+
