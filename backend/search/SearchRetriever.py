@@ -31,6 +31,9 @@ class SearchRetriever:
             html = f.read()
             self.logger.info(f"Retrieved url {url}")
         return BeautifulSoup(html, "lxml")
+        
+    def _get_favicon(self, publisher, size=128):
+        return f"https://www.google.com/s2/favicons?sz={size}&domain_url={publisher}.com"
     
     def _search(self, query):
         doc_positions_list = self.index.process_query(query)
@@ -56,7 +59,7 @@ class SearchRetriever:
             content = ' '.join([p.string for p in raw_content])
             publisher = raw_html.h3.string.replace("Publication outlet: ", "")
             url=raw_html.find('meta', id='url')['content']
-            image=self.faker.image_url(width=50, height=50),
+            image=self.favicon_base_url + publisher + ".com"
             bold_token = 0 if positions == [] else positions[0]
             relevant_content = self._get_relevant_content(content, bold_token)
             card = self.ResultCard(title=title,
