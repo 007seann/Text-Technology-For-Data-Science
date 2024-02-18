@@ -1,12 +1,22 @@
 import os
+import sys
 import time
 import pickle
 import hashlib
 import logging
+from functools import cache
+from pathlib import Path
 from bs4 import BeautifulSoup
+from sympy import limit
 
-CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
-SOURCE_FILE_EXTENSION = '.html'
+util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
+sys.path.append(str(util_dir))
+
+from AppConfig import AppConfig
+config = AppConfig()
+
+CRAWL_CACHE_PATH = config.get('indexer', 'crawler_cache_path', True)
+SOURCE_FILE_EXTENSION = config.get('indexer', 'crawler_file_extension')
 
 class Crawler:
     def __init__(self, base_directories, cache_file=CRAWL_CACHE_PATH):
@@ -28,6 +38,7 @@ class Crawler:
                 Exception: If no files are found in the base directories.
 
             """
+            print("Crawling...")
             index_changed = False
             for base_directory in self.base_directories:
                 for root, _, files in os.walk(base_directory):
@@ -57,7 +68,8 @@ class Crawler:
                 if not os.path.exists(file_path):
                     self.logger.info(f"File not found: {file_path}")
                     del self.cache[file_path]
-        
+    
+    @cache    
     def get_check_sum(self, file_path, algorithm='sha256'):
             """
             Calculate the checksum of a file using the sha256 algorithm.
@@ -74,24 +86,33 @@ class Crawler:
                 while chunk := file.read(4096):
                     hash_func.update(chunk)
             return hash_func.hexdigest()
-
-    def load_cache(self):
+    
+    def load_cache(self, crawl=True):
         try:
             with open(self.cache_file, 'rb') as file:
                 self.logger.info(f"Loading cache from {self.cache_file}")
                 self.cache = pickle.load(file)
-                self.crawl()  # Update the cache with new or modified files
+                crawl and self.crawl() # Update the cache with new or modified files
                 new_files = self.get_new_files()
                 self.logger.info(f"New files: {new_files}")
                 self.logger.info(f"Found {len(new_files)} new or modified files.")
-                
-                
         except (FileNotFoundError, EOFError) as e:
             self.logger.info(f"Cache file not found or is empty, creating new cache. Error: {e}")
             self.cache = {}
-            self.crawl()  # Populate self.cache with fresh data
+            crawl and self.crawl() # Populate self.cache with fresh data
 
-
+        if config.get("run_config", "run_local") == "True":
+            self.logger.info("Setting local development environment")
+            self.set_local_development()
+    
+    def set_local_development(self):
+        # split keys on collection and replace with remote url
+        new_cache = {}
+        api_url = config.get('server', 'collection_path')
+        for key, value in self.cache.items():
+            new_cache[api_url + key.split('collection')[1]] = value
+        self.cache = new_cache
+        
     def save_cache(self):
         # Back up the old cache file
         if os.path.exists(self.cache_file):
@@ -118,7 +139,8 @@ class Crawler:
         updated_files = list(self.updated_stack)  # Copy the stack
         clear_queue and self.updated_stack.clear()  # Clear the stack if clear_queue is True
         return updated_files
-        
+    
+    @cache
     def html_to_dict(self, html_path, doc_id):
         with open(html_path, 'r', encoding='utf-8') as file:
             soup = BeautifulSoup(file, 'html.parser')
@@ -134,3 +156,16 @@ class Crawler:
             if content:
                 doc_dict[dict_key] = content
         return doc_dict
+    
+if __name__ == '__main__':
+    c = Crawler(base_directories='')
+    c.load_cache(crawl=False)
+    print(c.set_local_development())
+    #print(c.cache_file)
+    #print(len(c.cache))
+    #limit = 10
+    #for key, value in c.cache.items():
+    #    print(key, value)
+    #    limit -= 1
+    #    if limit == 0:
+    #        break

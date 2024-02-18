@@ -1,13 +1,21 @@
 import sys
+import os
 sys.path.append("./")
 sys.path.append("../")
 sys.path.append("../backend/indexer/")
 sys.path.append("../backend/utils/")
 sys.path.append("../backend/search/")
+from pathlib import Path
 from backend.search.SearchRetriever import SearchRetriever
 from backend.indexer.PositionalIndex import PositionalIndex
 from backend.utils.VectorSpaceModel import VectorSpaceModel
 from flask import Flask, render_template, request
+
+util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
+sys.path.append(str(util_dir))
+
+from AppConfig import AppConfig
+config = AppConfig()
 # from flask_paginate import Pagination, get_page_parameter
 app = Flask(__name__)
 
@@ -48,4 +56,6 @@ def search():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=False, port=5002, use_reloader=False)
+    host = config.get('frontend', 'host')
+    port = config.get('frontend', 'port')
+    app.run(host=host, debug=True, port=port, use_reloader=False)

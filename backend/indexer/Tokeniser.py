@@ -3,8 +3,16 @@ import regex as re
 import string
 import spacy
 import os
+import sys
+from pathlib import Path
 
-STOPWORDS_PATH = os.path.join(os.path.dirname(__file__), '../utils/english_stop_words.txt')
+util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
+sys.path.append(str(util_dir))
+
+from AppConfig import AppConfig
+config = AppConfig()
+
+STOPWORDS_PATH = config.get('indexer', 'stop_words', True)
 class Tokeniser:
     """
     This class performs tokenisations of sentences.

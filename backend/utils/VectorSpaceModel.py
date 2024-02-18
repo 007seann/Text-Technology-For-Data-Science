@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import sys
-sys.path.append('./backend')
+sys.path.append('../backend')
 from Tokeniser import Tokeniser
 from Crawler import Crawler
 from QueryExpander import QueryExpander
@@ -10,11 +10,18 @@ import time
 import pickle
 import os
 import logging
+from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
-INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), '../database/collection')
-CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
-VSM_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/vsm_cache.pkl')
+util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
+sys.path.append(str(util_dir))
+
+from AppConfig import AppConfig
+config = AppConfig()
+
+INDEX_BASE_DIR = config.get('indexer', 'index_base_dir')
+CRAWL_CACHE_PATH = config.get('indexer', 'crawler_cache_path')
+VSM_CACHE_PATH = config.get('indexer', 'vsm_cache_path')
 
 class VectorSpaceModel:
     """

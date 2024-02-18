@@ -1,18 +1,26 @@
 import os
+import sys
 import math
 import logging
 import pickle
+from pathlib import Path
 from Crawler import Crawler
 from Tokeniser import Tokeniser
 from nltk.stem import PorterStemmer
 from PostingLinkedList import PostingLinkedList
 
-INDEX_SAVE_PATH = "../database/index/index_base.txt"
-CRAWL_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/url_cache.pkl')
-INDEX_BASE_DIR = os.path.join(os.path.dirname(__file__), '../database/collection')
-POSITIONAL_INDEX_LOG_PATH = os.path.join(os.path.dirname(__file__), '../log/index.log')
-POSITIONAL_INDEX_CACHE_PATH = os.path.join(os.path.dirname(__file__), '../utils/positional_index.pkl')
-STOPWORDS = "english_stop_words.txt"
+util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
+sys.path.append(str(util_dir))
+
+from AppConfig import AppConfig
+config = AppConfig()
+
+INDEX_SAVE_PATH = config.get('indexer', 'index_save_path', True)
+CRAWL_CACHE_PATH = config.get('indexer', 'crawler_cache_path', True)
+INDEX_BASE_DIR = config.get('indexer', 'index_base_dir', True)
+POSITIONAL_INDEX_LOG_PATH = config.get('indexer', 'positional_index_log', True)
+POSITIONAL_INDEX_CACHE_PATH = config.get('indexer', 'positional_index_cache', True)
+STOPWORDS = config.get('indexer', 'stop_words', True)
 
 class PositionalIndex:
     logging.basicConfig(filename=POSITIONAL_INDEX_LOG_PATH, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
@@ -221,6 +229,19 @@ class PositionalIndex:
         except FileNotFoundError:
             self.logger.error(f'File {filename} not found. Building index from scratch.')
             self.build_index()
+        
+        # Cache could have been created remotely. Stored document paths may still point to remote files when 
+        # working locally. Need to update to make them work locally. 
+        if config.get("run_config", "dev") == "True":
+            self.logger.info("Setting local development environment")
+            self.logger.info("Updating cache paths to local paths.")
+            new_url_to_docid = {}
+            new_docid_to_url = {}
+            for key, value in self.url_to_docid.items():
+                new_url_to_docid[config.get('server', 'collection_path') + key.split('collection')[1]] = value
+                new_docid_to_url[value] = config.get('server', 'collection_path') + key.split('collection')[1]
+            self.url_to_docid = new_url_to_docid
+            self.docid_to_url = new_docid_to_url
             
     def search_and(self, search_query, include_positions=False):
         tokenised_terms = self.extract_tokens(search_query)
@@ -349,7 +370,6 @@ class PositionalIndex:
                     break
 
         return False
-
     
     def calculate_tf_idf(self, term_freq, doc_freq):
         return (1 + math.log10(term_freq)) * math.log10((len(self.document_ids)) / doc_freq)
@@ -462,10 +482,4 @@ class PositionalIndex:
             return self.search_phrase(phrase, include_positions=True)
         else:
             return self.search_and(query, include_positions=True)
-
-
-if __name__ == '__main__':
-    p = PositionalIndex()
-    for t, idx in p.index.items():
-        print(t, idx)
 
