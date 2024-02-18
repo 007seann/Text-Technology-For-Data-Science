@@ -1,12 +1,22 @@
+import re
 import sys
 sys.path.append("./backend/indexer")
 from faker import Faker
 from bs4 import BeautifulSoup
+from pathlib import Path
 from dataclasses import dataclass
 import lxml
 import os
+import requests
 import logging
 
+util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
+sys.path.append(str(util_dir))
+
+from AppConfig import AppConfig
+config = AppConfig()
+
+RETRIEVAL_LIMIT = int(config.get("search_retriever", "result_limit"))
 class SearchRetriever:
     @dataclass
     class ResultCard:
@@ -27,18 +37,52 @@ class SearchRetriever:
 
     def _get_news(self, doc_id):
         url = self.index.docid_to_url[int(doc_id)]
-        with open(url, "r") as f:
-            html = f.read()
-            self.logger.info(f"Retrieved url {url}")
+        if config.get("run_config", "dev") == "True":
+            self.logger.info(f"Running in local mode, retrieving url {url} from API.")
+            html = requests.get(url).text
+        else:
+            with open(url, "r") as f:
+                html = f.read()
+                self.logger.info(f"Retrieved url {url}")
         return BeautifulSoup(html, "lxml")
         
-    def _get_favicon(self, publisher, size=128):
-        return f"https://www.google.com/s2/favicons?sz={size}&domain_url={publisher}.com"
-    
+    def _get_favicon(self, publisher, size=64):
+        mapping = {
+            "guardian": "theguardian",
+            "journal": "thejournal",
+            "NPR": "npr",
+            "CBS News": "cbsnews",
+            "CNN": "cnn",
+            "The Guardian": "theguardian",
+            "Politico": "politico",
+            "HuffPost": "huffpost",
+            "Fox News": "foxnews",
+            "ABC News": "abcnews",
+            "NBC News": "nbcnews",
+            "Chicago Tribune": "chicagotribune",
+            "USA Today": "usatoday",
+            "Slate": "slate",
+            "Reuters": "reuters",
+        }
+        domain = mapping.get(publisher.lower(), publisher.replace(" ", "").lower())
+        return f"https://www.google.com/s2/favicons?sz={size}&domain_url={domain}.com"
+        
     def _search(self, query):
         doc_positions_list = self.index.process_query(query)
         self.logger.info(f"Retrieved documents {doc_positions_list} for query {query}")
-        return doc_positions_list
+        if isinstance(doc_positions_list, set):
+            # Not sure why but sometimes this registers as a list and other times as a set.
+            limited_set = set()
+            for item in doc_positions_list:
+                if len(limited_set) < RETRIEVAL_LIMIT:
+                    limited_set.add(item)
+                else:
+                    break
+            return limited_set
+        elif isinstance(doc_positions_list, list):
+            return doc_positions_list[:RETRIEVAL_LIMIT]
+        else:
+            return doc_positions_list
 
     def _get_relevant_content(self, content, bold_token, left_window=15, right_window=15):
         split_content = content.split()
@@ -59,7 +103,7 @@ class SearchRetriever:
             content = ' '.join([p.string for p in raw_content])
             publisher = raw_html.h3.string.replace("Publication outlet: ", "")
             url=raw_html.find('meta', id='url')['content']
-            image=self.favicon_base_url + publisher + ".com"
+            image=self._get_favicon(publisher)
             bold_token = 0 if positions == [] else positions[0]
             relevant_content = self._get_relevant_content(content, bold_token)
             card = self.ResultCard(title=title,
