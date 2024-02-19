@@ -27,7 +27,6 @@ class SearchRetriever:
         date: str
         publisher: str
         sentiment: float
-        bold_token: int
         content: str
 
     def __init__(self, index):
@@ -85,15 +84,25 @@ class SearchRetriever:
         else:
             return doc_positions_list
 
-    def _get_relevant_content(self, content, bold_token, left_window=15, right_window=15):
+
+    def _get_relevant_content(self, title, body, bold_token_index, left_window=15, right_window=15):
+        if bold_token_index == -1:
+            return ' '.join(self.tokeniser.tokenise(body)[:right_window])
+        content = title + " " + body
         split_content = self.tokeniser.tokenise(content)
-        if bold_token < left_window:
-            left_window = bold_token
-        if len(split_content) - bold_token < right_window:
-            right_window = len(split_content) - bold_token
-        relevant_content = split_content[bold_token-left_window:bold_token+right_window]
-        SearchLogger.log(f"Returning relevant content for bold token {split_content[bold_token]} and content {relevant_content}")
+        bold_token = split_content[bold_token_index]
+        split_content[bold_token_index] = f"<b>{bold_token}</b>"
+        start = max(0, bold_token_index-left_window)
+        end = min(len(split_content), bold_token_index+right_window)
+        relevant_content = split_content[start:end]
+        SearchLogger.log(f"Returning relevant content for bold token: {bold_token} and content: {' '.join(relevant_content)}")
         return "...{}...".format(' '.join(relevant_content).strip())
+    
+    def _get_meaningful_bold_token_index(self, positions, title):
+        for position in positions:
+            if position >= len(title):
+                return position
+        return -1
     
     def get_results(self, query):
         result_cards = []
@@ -102,20 +111,19 @@ class SearchRetriever:
         for raw_html, positions in returned_news:
             title = raw_html.h1.string
             date = raw_html.sub.string.replace("Published ", "")[:10]
-            raw_content = raw_html.find_all('p')
-            content = ' '.join([p.string for p in raw_content])
+            body = raw_html.find_all('p')
+            body_content = ' '.join([p.string for p in body])
             publisher = raw_html.h3.string.replace("Publication outlet: ", "")
             url=raw_html.find('meta', id='url')['content']
             image=self._get_favicon(publisher)
-            bold_token = 0 if positions == [] else positions[0]
-            relevant_content = self._get_relevant_content(content, bold_token)
+            bold_token_index = self._get_meaningful_bold_token_index(positions, title)
+            relevant_content = self._get_relevant_content(title, body_content, bold_token_index)
             card = self.ResultCard(title=title,
                                     url=url,
                                     image=image,
                                     date=date,
                                     publisher=publisher,
                                     sentiment=0.0, # TODO
-                                    bold_token=bold_token,
                                     content=relevant_content)
             SearchLogger.log(f"Created result card {card}")
             result_cards.append(card)
