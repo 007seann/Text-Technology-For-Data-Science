@@ -30,17 +30,20 @@
                     <div class = "result_card">
                         <img src="{{ card.image }}" alt="Image">
                         <div>
-                            <h3>{{ card.title }}</h3>
-                            <p>{{ card.date }}</p>
                             <p>{{ card.publisher }}</p>
                             <p><a href="{{ card.url }}">{{ card.url }}</a></p>
+                            <p>{{ card.date }}</p>                            
+                        </div>  
+                        <div class = "result_articles">
+                            <h3>{{ card.title }}</h3>
+                            
                             <!-- <p>{{ card.content }}</p> -->
                             <p>{{ card.content|replace(card.bold_token, '<span class="bold-token">{{ card.bold_token }}</span>')|safe }}</p>
-                        
                             <pre>
 
                             </pre>
-                        </div>                                                   
+                            
+                        </div>                                                 
                     </div>
                 {% endfor %}
             </div>
