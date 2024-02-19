@@ -227,7 +227,7 @@ html{
 .result_card img {
     border-radius: 100%;
     float: left;
-    margin-right: 20px; /* Add space between image and text */
+    margin-right: 10px; /* Add space between image and text */
     min-width: 50px;
     max-width: 50px; /* Adjust as needed */
     
