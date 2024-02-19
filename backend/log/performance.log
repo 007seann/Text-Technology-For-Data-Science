@@ -1,0 +1,7 @@
+2024-02-19 18:34:48,190 - PerformanceLogger - INFO - Performance logger loaded
+2024-02-19 18:34:48,190 - PerformanceLogger - INFO - Search AND (edinburgh) took 0.00167083740234375 seconds.
+2024-02-19 18:34:48,190 - PerformanceLogger - INFO - Entire Search (edinburgh) took 0.0026018619537353516 seconds
+2024-02-19 18:34:53,852 - PerformanceLogger - INFO - Search AND (Edinburgh) took 0.0001900196075439453 seconds.
+2024-02-19 18:34:53,852 - PerformanceLogger - INFO - Entire Search (Edinburgh) took 0.0005052089691162109 seconds
+2024-02-19 18:35:07,307 - PerformanceLogger - INFO - Search AND (edinburgh) took 9.512901306152344e-05 seconds.
+2024-02-19 18:35:07,307 - PerformanceLogger - INFO - Entire Search (edinburgh) took 0.00036025047302246094 seconds
