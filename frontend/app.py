@@ -9,9 +9,6 @@ from pathlib import Path
 from backend.search.SearchRetriever import SearchRetriever
 from backend.indexer.PositionalIndex import PositionalIndex
 from backend.utils.VectorSpaceModel import VectorSpaceModel
-from backend.logger.PerformanceLogger import PerformanceLogger
-from backend.logger.SearchLogger import SearchLogger
-from backend.logger.MemoryLogger import MemoryLogger
 from flask import Flask, render_template, request
 
 util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')

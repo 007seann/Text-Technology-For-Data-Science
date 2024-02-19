@@ -8,6 +8,7 @@ import os
 import requests
 from backend.logger.SearchLogger import SearchLogger
 from backend.logger.PerformanceLogger import PerformanceLogger
+from backend.indexer.Tokeniser import Tokeniser
 import time
 
 util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
@@ -31,6 +32,7 @@ class SearchRetriever:
 
     def __init__(self, index):
         self.index = index
+        self.tokeniser = Tokeniser()
 
     def _get_news(self, doc_id):
         url = self.index.docid_to_url[int(doc_id)]
@@ -84,12 +86,14 @@ class SearchRetriever:
             return doc_positions_list
 
     def _get_relevant_content(self, content, bold_token, left_window=15, right_window=15):
-        split_content = content.split()
+        split_content = self.tokeniser.tokenise(content)
         if bold_token < left_window:
             left_window = bold_token
         if len(split_content) - bold_token < right_window:
             right_window = len(split_content) - bold_token
-        return "...{}...".format(' '.join(split_content[bold_token-left_window:bold_token+right_window]).strip())
+        relevant_content = split_content[bold_token-left_window:bold_token+right_window]
+        SearchLogger.log(f"Returning relevant content for bold token {split_content[bold_token]} and content {relevant_content}")
+        return "...{}...".format(' '.join(relevant_content).strip())
     
     def get_results(self, query):
         result_cards = []
