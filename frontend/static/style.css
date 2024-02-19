@@ -228,6 +228,7 @@ html{
     border-radius: 100%;
     float: left;
     margin-right: 20px; /* Add space between image and text */
+    min-width: 70px;
     max-width: 70px; /* Adjust as needed */
     
 }
