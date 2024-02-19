@@ -38,7 +38,7 @@
                             <h3>{{ card.title }}</h3>
                             
                             <!-- <p>{{ card.content }}</p> -->
-                            <p>{{ card.content|replace(card.bold_token, '<span class="bold-token">{{ card.bold_token }}</span>')|safe }}</p>
+                            <p>{{ card.content|replace(query, '<strong>{{ query }}</strong>')|safe }}</p>
                             <pre>
 
                             </pre>
