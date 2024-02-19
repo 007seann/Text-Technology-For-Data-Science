@@ -227,6 +227,7 @@ html{
 .result_card img {
     float: left;
     margin-right: 20px; /* Add space between image and text */
+    min-width:100px;
     max-width: 100px; /* Adjust as needed */
     radius: 100%;
 }
@@ -237,10 +238,7 @@ html{
 
 .col3{
     flex: 2;
-    
-    padding: 10px;
-    
-    
+    padding: 10px;    
 }
 .bold-token {
     font-weight: bold; /* Make the bold_token bold */
