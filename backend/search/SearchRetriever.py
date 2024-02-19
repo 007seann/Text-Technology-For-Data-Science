@@ -1,14 +1,14 @@
-import re
 import sys
 sys.path.append("./backend/indexer")
-from faker import Faker
+sys.path.append("./backend/logger")
 from bs4 import BeautifulSoup
 from pathlib import Path
 from dataclasses import dataclass
-import lxml
 import os
 import requests
-import logging
+from backend.logger.SearchLogger import SearchLogger
+from backend.logger.PerformanceLogger import PerformanceLogger
+import time
 
 util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
 sys.path.append(str(util_dir))
@@ -31,19 +31,16 @@ class SearchRetriever:
 
     def __init__(self, index):
         self.index = index
-        self.faker = Faker()
-        self.logger = logging.getLogger(self.__class__.__name__) 
-        self.logger.info(f"SearchRetriever loaded. Ready for query")
 
     def _get_news(self, doc_id):
         url = self.index.docid_to_url[int(doc_id)]
         if config.get("run_config", "dev") == "True":
-            self.logger.info(f"Running in local mode, retrieving url {url} from API.")
+            SearchLogger.log(f"Running in local mode, retrieving url {url} from API.")
             html = requests.get(url).text
         else:
             with open(url, "r") as f:
                 html = f.read()
-                self.logger.info(f"Retrieved url {url}")
+                SearchLogger.log(f"Retrieved url {url}")
         return BeautifulSoup(html, "lxml")
         
     def _get_favicon(self, publisher, size=64):
@@ -68,8 +65,10 @@ class SearchRetriever:
         return f"https://www.google.com/s2/favicons?sz={size}&domain_url={domain}.com"
         
     def _search(self, query):
+        start = time.time()
         doc_positions_list = self.index.process_query(query)
-        self.logger.info(f"Retrieved documents {doc_positions_list} for query {query}")
+        PerformanceLogger.log(f"Entire Search ({query}) took {time.time() - start} seconds")
+        SearchLogger.log(f"Retrieved documents {doc_positions_list} for query {query}")
         if isinstance(doc_positions_list, set):
             # Not sure why but sometimes this registers as a list and other times as a set.
             limited_set = set()
@@ -114,6 +113,6 @@ class SearchRetriever:
                                     sentiment=0.0, # TODO
                                     bold_token=bold_token,
                                     content=relevant_content)
-            self.logger.info(f"Created result card {card}")
+            SearchLogger.log(f"Created result card {card}")
             result_cards.append(card)
         return result_cards

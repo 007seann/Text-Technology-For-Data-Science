@@ -3,11 +3,12 @@ import sys
 import time
 import pickle
 import hashlib
-import logging
 from functools import cache
 from pathlib import Path
 from bs4 import BeautifulSoup
-from sympy import limit
+from backend.logger.IndexerLogger import IndexerLogger
+from backend.logger.PerformanceLogger import PerformanceLogger
+import time
 
 util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
 sys.path.append(str(util_dir))
@@ -21,7 +22,6 @@ SOURCE_FILE_EXTENSION = config.get('indexer', 'crawler_file_extension')
 class Crawler:
     def __init__(self, base_directories, cache_file=CRAWL_CACHE_PATH):
         self.base_directories = base_directories if isinstance(base_directories, list) else [base_directories]
-        self.logger = logging.getLogger(self.__class__.__name__)
         
         self.cache_file = cache_file
         self.updated_stack = []  # Stack to track updated files
@@ -38,7 +38,8 @@ class Crawler:
                 Exception: If no files are found in the base directories.
 
             """
-            print("Crawling...")
+            start = time.time()
+            IndexerLogger.log("Crawling...")
             index_changed = False
             for base_directory in self.base_directories:
                 for root, _, files in os.walk(base_directory):
@@ -52,21 +53,22 @@ class Crawler:
                             index_changed = True
                             self.updated_stack.append(file_path)
                             self.cache[file_path] = checksum  # Update cache with new checksum
+            PerformanceLogger.log(f"Crawling took {time.time() - start} seconds.")
             if not self.cache:
-                self.logger.info("No files found in the base directories.")
+                IndexerLogger.log("No files found in the base directories.")
                 raise Exception("No files found in the base directories.")
             
             if index_changed:
-                self.logger.info("Index changed, updating cache...")
-                self.logger.info(f"Current cache size: {len(self.cache)}")
-                self.logger.info(f"Updated files size: {len(self.updated_stack)}")
+                IndexerLogger.log("Index changed, updating cache...")
+                IndexerLogger.log(f"Current cache size: {len(self.cache)}")
+                IndexerLogger.log(f"Updated files size: {len(self.updated_stack)}")
                 self.save_cache()
     
             # Sanity check for non-existent files
-            self.logger.info("Sanity check for non-existent files...")
+            IndexerLogger.log("Sanity check for non-existent files...")
             for file_path in list(self.cache.keys()):
                 if not os.path.exists(file_path):
-                    self.logger.info(f"File not found: {file_path}")
+                    IndexerLogger.log(f"File not found: {file_path}")
                     del self.cache[file_path]
     
     @cache    
@@ -90,19 +92,19 @@ class Crawler:
     def load_cache(self, crawl=True):
         try:
             with open(self.cache_file, 'rb') as file:
-                self.logger.info(f"Loading cache from {self.cache_file}")
+                IndexerLogger.log(f"Loading cache from {self.cache_file}")
                 self.cache = pickle.load(file)
                 crawl and self.crawl() # Update the cache with new or modified files
                 new_files = self.get_new_files()
-                self.logger.info(f"New files: {new_files}")
-                self.logger.info(f"Found {len(new_files)} new or modified files.")
+                IndexerLogger.log(f"New files: {new_files}")
+                IndexerLogger.log(f"Found {len(new_files)} new or modified files.")
         except (FileNotFoundError, EOFError) as e:
-            self.logger.info(f"Cache file not found or is empty, creating new cache. Error: {e}")
+            IndexerLogger.log(f"Cache file not found or is empty, creating new cache. Error: {e}")
             self.cache = {}
             crawl and self.crawl() # Populate self.cache with fresh data
 
         if config.get("run_config", "run_local") == "True":
-            self.logger.info("Setting local development environment")
+            IndexerLogger.log("Setting local development environment")
             self.set_local_development()
     
     def set_local_development(self):
@@ -118,10 +120,10 @@ class Crawler:
         if os.path.exists(self.cache_file):
             backup_path = "{}.{}".format(self.cache_file, time.strftime("%Y%m%d-%H%M%S"))
             os.rename(self.cache_file, backup_path)
-            self.logger.info(f"Backed up old cache to {backup_path}")
+            IndexerLogger.log(f"Backed up old cache to {backup_path}")
         
         with open(self.cache_file, 'wb') as file:
-            self.logger.info(f"Saving cache to {self.cache_file}")
+            IndexerLogger.log(f"Saving cache to {self.cache_file}")
             pickle.dump(self.cache, file)
 
 
@@ -156,16 +158,3 @@ class Crawler:
             if content:
                 doc_dict[dict_key] = content
         return doc_dict
-    
-if __name__ == '__main__':
-    c = Crawler(base_directories='')
-    c.load_cache(crawl=False)
-    print(c.set_local_development())
-    #print(c.cache_file)
-    #print(len(c.cache))
-    #limit = 10
-    #for key, value in c.cache.items():
-    #    print(key, value)
-    #    limit -= 1
-    #    if limit == 0:
-    #        break
