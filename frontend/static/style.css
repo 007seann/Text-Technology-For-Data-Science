@@ -228,6 +228,7 @@ html{
     float: left;
     margin-right: 20px; /* Add space between image and text */
     max-width: 100px; /* Adjust as needed */
+    radius: 100%;
 }
 
 .result_card div {
