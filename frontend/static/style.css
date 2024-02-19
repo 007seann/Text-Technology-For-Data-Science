@@ -161,16 +161,14 @@ html{
     outline: none;
     padding: 0 20px;
     font-size: 14px;
-    width: 40%;
+    width: 100%;
     -webkit-appearance: none;
     appearance: none;
     outline: none;
     transition: width 2s ease-out;
 }
 
-.search_header input:focus {
-    width: 100%;
-}
+
 
 .search_header button{
     background: #041E42;
