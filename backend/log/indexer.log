@@ -1,0 +1,5 @@
+2024-02-19 11:35:44,262 - IndexerLogger - INFO - Indexer logger loaded
+2024-02-19 11:35:44,262 - IndexerLogger - INFO - Loading index from cache.
+2024-02-19 11:35:45,720 - IndexerLogger - INFO - Index loaded from /Users/danielkim/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Year_4/TTDS/ttds-group-1/backend/caches/positional_index_cache.pkl
+2024-02-19 11:35:45,720 - IndexerLogger - INFO - Setting local development environment
+2024-02-19 11:35:45,720 - IndexerLogger - INFO - Updating cache paths to local paths.

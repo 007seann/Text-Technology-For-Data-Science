@@ -4,6 +4,9 @@ import spacy
 import sys
 import numpy as np
 sys.path.append('../')
+from backend.logger.PerformanceLogger import PerformanceLogger
+from backend.logger.SearchLogger import SearchLogger
+import time
 
 
 class QueryExpander:
@@ -13,7 +16,6 @@ class QueryExpander:
     Modes:
         syn - Expands the query with synonyms.
         prf - Expands the query with PRF (Pseudo Relevance Feedback)
-        bert - Expands the query with BERT. TODO
     """
     def __init__(self, vsm):
         """
@@ -29,10 +31,13 @@ class QueryExpander:
         :param query: The query to be expanded.
         :return: The expanded query.
         """
+        start = time.time()
         if mode == "prf":
             query_vector = self.vsm.get_query_vector(query)
             returned_vectors = self.vsm.calculate_vector_similarity(query_vector)
+            PerformanceLogger.log(f"Query Expansion (PRF) took {time.time() - start} seconds.")
             return self._prf_expand(query_vector, returned_vectors)
+        PerformanceLogger.log(f"Query Expansion (Syn) took {time.time() - start} seconds.")
         return self._syn_expand(query)
         
     def _syn_expand(self, query, words_to_replace=3):
@@ -45,7 +50,7 @@ class QueryExpander:
         token_pos = [(token, token.pos_) for token in self.nlp(query)]
         tokens_to_replace = random.sample(token_pos, words_to_replace)
         query_tokens = [token.text for token, _ in token_pos]
-        print("Old query: {}".format(query))
+        SearchLogger.log(f"Old query (SYN): {query}")
         for token, pos in tokens_to_replace:
             synsets = []
             if pos == "NOUN":
@@ -60,8 +65,8 @@ class QueryExpander:
                 different_words = [synset for synset in synsets if synset.lemmas()[0].name() != token.text]
                 synset = random.choice(different_words)
                 query_tokens.append(synset.lemmas()[0].name())
-        print("New query: {}".format(" ".join(query_tokens)))
         new_query = " ".join(query_tokens)
+        SearchLogger.log(f"New query (SYN): {new_query}")
         return new_query
 
     def _get_centroid(self, doc_vectors_tuple, top_t):

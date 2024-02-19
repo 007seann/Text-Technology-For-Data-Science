@@ -1,0 +1,6 @@
+2024-02-19 11:37:02,881 - PerformanceLogger - INFO - Performance logger loaded
+2024-02-19 11:37:02,881 - PerformanceLogger - INFO - Search AND (baby) took 0.0016582012176513672 seconds.
+2024-02-19 11:37:02,881 - PerformanceLogger - INFO - Search (baby) took 0.0025370121002197266 seconds
+2024-02-19 11:38:25,597 - PerformanceLogger - INFO - Search AND (donald) took 0.00015497207641601562 seconds.
+2024-02-19 11:38:25,598 - PerformanceLogger - INFO - Search AND (trump) took 0.00014019012451171875 seconds.
+2024-02-19 11:38:25,600 - PerformanceLogger - INFO - Search (donald AND trump) took 0.002706289291381836 seconds

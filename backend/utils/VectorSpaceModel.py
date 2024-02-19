@@ -9,9 +9,12 @@ import scipy.sparse as sp
 import time
 import pickle
 import os
-import logging
 from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
+from backend.logger.PerformanceLogger import PerformanceLogger
+from backend.logger.IndexerLogger import IndexerLogger
+from backend.logger.MemoryLogger import MemoryLogger
+from backend.logger.SearchLogger import SearchLogger
 
 util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
 sys.path.append(str(util_dir))
@@ -44,15 +47,14 @@ class VectorSpaceModel:
         self.url_to_docid = {}
         self.docid_to_url = {}
         self.documents = []
-        self.logger = logging.getLogger(self.__class__.__name__) 
         
         # Initialise VSM
         cache_exists = os.path.exists(VSM_CACHE_PATH)
         if cache_exists:
-            self.logger.info("Loading VSM from cache.")
+            IndexerLogger.log("Loading VSM from cache.")
             self.load_from_file()
         else:
-            self.logger.info("Building VSM from scratch.")
+            IndexerLogger.log("Building VSM from scratch.")
             self.build_vsm()
 
     def save_to_file(self, filename=VSM_CACHE_PATH):
@@ -71,7 +73,7 @@ class VectorSpaceModel:
         }
         with open(filename, 'wb') as file:
             pickle.dump(data, file)
-        self.logger.info(f"Saved VectorSpaceModel to {filename}")
+        (f"Saved VectorSpaceModel to {filename}")
 
     def load_from_file(self, filename=VSM_CACHE_PATH):
         """
@@ -80,6 +82,7 @@ class VectorSpaceModel:
         try:
             with open(filename, 'rb') as file:
                 data = pickle.load(file)
+                MemoryLogger.log(f"File Size: {sys.getsizeof(data)} bytes")
             self.tokeniser = Tokeniser()
             self.url_to_docid = data['url_to_docid']
             self.docid_to_url = data['docid_to_url']
@@ -89,9 +92,9 @@ class VectorSpaceModel:
             self.count_matrix = data['count_matrix']
             self.idf = data['idf']
             self.score_matrix = data['score_matrix']
-            self.logger.info(f"Loaded VectorSpaceModel from {filename}")
+            IndexerLogger.log(f"VectorSpaceModel loaded from {filename}")
         except FileNotFoundError:
-            self.logger.error(f"File {filename} not found. Building VectorSpaceModel from scratch.")
+            IndexerLogger.log(f"File {filename} not found. Building VectorSpaceModel from scratch.")
             self.__init__()
 
     def build_vsm(self):
@@ -105,22 +108,13 @@ class VectorSpaceModel:
 
         # Count Matrix
         # Inverted Index of the form {token: {doc_id: count}} (Sparse Matrix)
-        start = time.time()
         self.count_matrix = self.make_count_matrix()
-        end = time.time()
-        self.logger.info(f"Count Matrix time: {end - start}")
 
         # Pre-compute the inverse document frequency for each token
-        start = time.time()
         self.precompute_idf()
-        end = time.time()
-        self.logger.info(f"IDF time: {end - start}")
 
         # Score Matrix of the form {doc_id: {token: score}} (Sparse Matrix)
-        start = time.time()
         self.score_matrix = self.make_score_matrix()
-        end = time.time()
-        self.logger.info(f"Score Matrix time: {end - start}")
 
         self.save_to_file()
 
@@ -151,22 +145,25 @@ class VectorSpaceModel:
         self.tokeniser = Tokeniser(use_stopping=use_stopping, use_stemming=use_stemming, punctuations_to_keep=punctuations_to_keep)
         start = time.time()
         self.tokenised_documents = [self.tokeniser.tokenise(document) for document in self.documents]
-        end = time.time()
-        self.logger.info(f"Tokenisation time: {end - start}")
+        PerformanceLogger.log(f"Tokenisation Time: {time.time() - start}")
 
     def precompute_constants(self):
         # Pre-compute constants
+        start = time.time()
         self.N = len(self.tokenised_documents)
         self.L_bar = sum([len(document) for document in self.tokenised_documents]) / self.N
+        PerformanceLogger.log(f"Constants Precomputation Time: {time.time() - start}")
 
     def make_vocab(self):
         """
         Returns the vocabulary of the documents.
         """
+        start = time.time()
         vocab = set()
         for tokenised_document in self.tokenised_documents:
             vocab.update(tokenised_document)
         vocab_dict = {token: token_id for token_id, token in enumerate(vocab)}
+        PerformanceLogger.log(f"Vocabulary Computation Time: {time.time() - start}")
         return vocab_dict
     
     def make_count_matrix(self):
@@ -175,6 +172,7 @@ class VectorSpaceModel:
         :return: The count matrix of the documents.
         Count Matrix = {token: {doc_id: count}}
         """
+        start = time.time()
         # Initialize the count matrix as a DOK matrix
         count_matrix = sp.dok_matrix((len(self.vocab), self.N), dtype=np.int32)
 
@@ -185,6 +183,8 @@ class VectorSpaceModel:
             token_indices = [self.vocab[token] for token in unique_tokens]
             count_matrix[token_indices, doc_id] = counts
 
+        PerformanceLogger.log(f"Count Matrix Time: {time.time() - start}")
+        MemoryLogger.log(f"Count Matrix Size: {sys.getsizeof(count_matrix)} bytes")
         return count_matrix
     
     def precompute_idf(self):
@@ -193,10 +193,12 @@ class VectorSpaceModel:
         """
         # len(self.count_matrix[token_id]) returns the document frequency of the token 
         # TODO Can this be optimised further?
+        start = time.time()
         if self.mode == 'tfidf':
             self.idf = {token: self.calculate_idf(len(self.count_matrix[token_id]), mode='t') for token, token_id in self.vocab.items()}
         elif self.mode == 'bm25':
             self.idf = {token: self.calculate_idf(len(self.count_matrix[token_id]), mode='bm25') for token, token_id in self.vocab.items()}
+        PerformanceLogger.log(f"IDF Precomputation Time: {time.time() - start}")
     
     def make_score_matrix(self):
         """
@@ -204,6 +206,7 @@ class VectorSpaceModel:
         :param documents: The documents.
         :return: The score matrix of the documents.
         """
+        start = time.time()
         score_function = {
             'tfidf': self.calculate_tf_idf,
             'bm25': self.calculate_bm25
@@ -213,6 +216,8 @@ class VectorSpaceModel:
             for token in tokenised_document:
                 token_id = self.vocab[token]
                 score_matrix[doc_id, token_id] = score_function[self.mode](token, doc_id)
+        PerformanceLogger.log(f"Score Matrix Time: {time.time() - start}")
+        MemoryLogger.log(f"Score Matrix Size: {sys.getsizeof(score_matrix)} bytes")
         return score_matrix
     
     def calculate_tf(self, token_id, doc_id, mode, is_query=False, query_term_freq=None):
@@ -341,12 +346,10 @@ class VectorSpaceModel:
             query_vector = sp.csr_matrix(query, shape=(1, len(self.vocab))).T
         else:
             query_vector = self.get_query_vector(query)
-        end = time.time()
-        self.logger.info(f"Query Vectorisation time: {end-start}")
+        SearchLogger.log(f"Query Vectorisation Time: {time.time() - start}")
 
         start = time.time()
         similarity = self.calculate_vector_similarity(query_vector)[:top]
-        end = time.time()
-        self.logger.info(f"Query time: {end-start}")
+        SearchLogger.log(f"Similarity Calculation Time: {time.time() - start}")
         doc_id_positions = [(doc_id, []) for doc_id, _ in similarity]
         return doc_id_positions

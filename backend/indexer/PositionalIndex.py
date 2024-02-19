@@ -1,13 +1,17 @@
 import os
 import sys
+sys.path.append("backend/logger/")
 import math
-import logging
 import pickle
 from pathlib import Path
 from Crawler import Crawler
 from Tokeniser import Tokeniser
 from nltk.stem import PorterStemmer
 from PostingLinkedList import PostingLinkedList
+from backend.logger.PerformanceLogger import PerformanceLogger
+from backend.logger.MemoryLogger import MemoryLogger
+from backend.logger.IndexerLogger import IndexerLogger
+import time
 
 util_dir = Path(os.path.join(os.path.dirname(__file__))).parent.joinpath('utils')
 sys.path.append(str(util_dir))
@@ -18,14 +22,11 @@ config = AppConfig()
 INDEX_SAVE_PATH = config.get('indexer', 'index_save_path', True)
 CRAWL_CACHE_PATH = config.get('indexer', 'crawler_cache_path', True)
 INDEX_BASE_DIR = config.get('indexer', 'index_base_dir', True)
-POSITIONAL_INDEX_LOG_PATH = config.get('indexer', 'positional_index_log', True)
 POSITIONAL_INDEX_CACHE_PATH = config.get('indexer', 'positional_index_cache', True)
 STOPWORDS = config.get('indexer', 'stop_words', True)
 
 class PositionalIndex:
-    logging.basicConfig(filename=POSITIONAL_INDEX_LOG_PATH, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
     def __init__(self, load_from_cache=True):   
-        self.logger = logging.getLogger(self.__class__.__name__) 
                 
         # Stemming and Tokenisation utils
         self.stemmer = PorterStemmer() # TODO
@@ -45,10 +46,10 @@ class PositionalIndex:
         # Initialise index
         cache_exists = os.path.exists(POSITIONAL_INDEX_CACHE_PATH)
         if load_from_cache and cache_exists:
-            self.logger.info("Loading index from cache.")
+            IndexerLogger.log("Loading index from cache.")
             self.load_from_file()
         else:
-            self.logger.info("Building index from scratch.")
+            IndexerLogger.log("Building index from scratch.")
             self.build_index()
             
     def build_index(self):
@@ -59,20 +60,23 @@ class PositionalIndex:
             Exception: If no files are found in the base directories.
 
         """
+        start = time.time()
         self.crawler.load_cache()
         crawler_url_cache = self.crawler.cache # {url: checksum}
         if not crawler_url_cache:
-            self.logger.info("No files found in the base directories.")
+            IndexerLogger.log("No files found in the base directories.")
             raise Exception("No files found in the base directories.")
         for file_path, checksum in crawler_url_cache.items():
             if file_path not in self.url_to_docid:
-                self.logger.info(f"Processing file: {file_path}")
+                IndexerLogger.log(f"Processing file: {file_path}")
 
                 self.url_to_docid[file_path] = len(self.url_to_docid)
                 self.docid_to_url[len(self.url_to_docid)-1] = file_path
                 doc_dict = self.crawler.html_to_dict(file_path, self.url_to_docid[file_path])
                 self.insert_document(doc_dict)
-        self.logger.info("Index built successfully.")
+        IndexerLogger.log("{} index built successfully.".format(self.__class__.__name__))
+        MemoryLogger.log(f"Index size: {sys.getsizeof(self.index)} bytes")
+        PerformanceLogger.log(f"Indexing took {time.time() - start} seconds.")
         self.save_to_file()
         self.load_from_file()
     
@@ -98,11 +102,15 @@ class PositionalIndex:
         """
         self.crawler.crawl()
         new_pages = self.crawler.get_new_files(clear_queue=True)
+        start = time.time()
         for file_path in new_pages:
             self.url_to_docid[file_path] = len(self.url_to_docid)
             self.docid_to_url[len(self.url_to_docid)] = file_path
             doc_dict = self.crawler.html_to_dict(file_path, self.url_to_docid[file_path])            
-            self.insert_document(doc_dict) 
+            self.insert_document(doc_dict)
+        IndexerLogger.log("Index reloaded successfully.")
+        MemoryLogger.log(f"Index size: {sys.getsizeof(self.index)} bytes")
+        PerformanceLogger.log(f"Reloading index took {time.time() - start} seconds.")
         
     
     def insert_document(self, document_dict, include_subsections=False):
@@ -212,12 +220,14 @@ class PositionalIndex:
         }
         with open(filename, 'wb') as file:
             pickle.dump(data, file)
-        self.logger.info(f'Index saved to {filename}')
+        MemoryLogger.log(f"Index Size: {sys.getsizeof(data)} bytes")
+        IndexerLogger.log(f'Index saved to {filename}')
 
     def load_from_file(self, filename=POSITIONAL_INDEX_CACHE_PATH):
         try:
             with open(filename, 'rb') as file:
                 data = pickle.load(file)
+                MemoryLogger.log(f"Index Size: {sys.getsizeof(data)} bytes")
             self.url_to_docid = data['url_to_docid']
             self.docid_to_url = data['docid_to_url']
             self.index = data['index']
@@ -225,16 +235,16 @@ class PositionalIndex:
             self.vocabulary = data['vocabulary']
             self.vocabulary_size = data['vocabulary_size']
             self.headline_index = data['headline_index']
-            self.logger.info(f'Index loaded from {filename}')
+            IndexerLogger.log(f'Index loaded from {filename}')
         except FileNotFoundError:
-            self.logger.error(f'File {filename} not found. Building index from scratch.')
+            IndexerLogger.log(f'Index file not found at {filename}. Building index from scratch.')
             self.build_index()
         
         # Cache could have been created remotely. Stored document paths may still point to remote files when 
         # working locally. Need to update to make them work locally. 
         if config.get("run_config", "dev") == "True":
-            self.logger.info("Setting local development environment")
-            self.logger.info("Updating cache paths to local paths.")
+            IndexerLogger.log("Setting local development environment")
+            IndexerLogger.log("Updating cache paths to local paths.")
             new_url_to_docid = {}
             new_docid_to_url = {}
             for key, value in self.url_to_docid.items():
@@ -244,6 +254,7 @@ class PositionalIndex:
             self.docid_to_url = new_docid_to_url
             
     def search_and(self, search_query, include_positions=False):
+        start = time.time()
         tokenised_terms = self.extract_tokens(search_query)
         if not tokenised_terms:
             return set()  # Return an empty set if there are no terms
@@ -274,9 +285,11 @@ class PositionalIndex:
         if not include_positions:
             return document_set
             
+        PerformanceLogger.log(f"Search AND ({search_query}) took {time.time() - start} seconds.")
         return [(doc, posting_cache[doc].toList()) for doc in document_set]
 
     def search_not(self, search_query):
+        start = time.time()
         excluded_set = set()
         tokenised_terms = self.extract_tokens(search_query)
 
@@ -287,9 +300,11 @@ class PositionalIndex:
             doc_freq, doc_dict = self.index.get(token, (0, {}))
             excluded_set.update(doc_dict.keys())
 
+        PerformanceLogger.log(f"Search NOT ({search_query}) took {time.time() - start} seconds.")
         return self.document_ids - excluded_set
     
     def search_phrase(self, search_query, include_positions=False):
+        start = time.time()
         document_set, posting_cache = set(), {}
         search_term_index = 0
         tokenised_terms = self.extract_tokens(search_query)
@@ -324,10 +339,12 @@ class PositionalIndex:
         # alternate version for debugging
         if not include_positions:
             return document_set
-        
+
+        PerformanceLogger.log(f"Search phrase ({search_query}) took {time.time() - start} seconds.")
         return [(doc, posting_cache[doc].toList()) for doc in document_set]
 
     def search_proximity(self, search_query, proximity, include_positions=False):
+        start = time.time()
         tokenised_terms = self.extract_tokens(search_query)
         if not tokenised_terms:
             return set()  # Return an empty set if there are no terms
