@@ -225,11 +225,12 @@ html{
 }
 
 .result_card img {
+    border-radius: 100%;
     float: left;
     margin-right: 20px; /* Add space between image and text */
-    min-width:100px;
-    max-width: 100px; /* Adjust as needed */
-    radius: 100%;
+    min-width:70px;
+    max-width: 70px; /* Adjust as needed */
+    
 }
 
 .result_card div {
