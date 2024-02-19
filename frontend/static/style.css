@@ -7,6 +7,7 @@
 
 html{
     box-sizing: border-box;
+    background: #d3d3d3;
     overflow-x: hidden;
     margin: 0;
     padding: 0;
@@ -160,7 +161,7 @@ html{
     outline: none;
     padding: 0 20px;
     font-size: 14px;
-    width: 30%;
+    width: 40%;
     -webkit-appearance: none;
     appearance: none;
     outline: none;
@@ -186,15 +187,16 @@ html{
 }
 
 .svg-image {
-    width: 200px; 
+    width: 12%; 
     height: auto; 
     float: left; 
-    margin-right: 10px;
+    margin-right: 5px;
     
 }
 
 .result_header{
-    margin-top: 0px;
+    margin-top: 10px;
+    margin-bottom: 10px;
     font-size: 18px;
     text-align: center;
     padding: 0px 0px;
@@ -239,4 +241,38 @@ html{
     padding: 10px;
     
     
+}
+.bold-token {
+    font-weight: bold; /* Make the bold_token bold */
+}
+
+.pagination-controls {
+    position: fixed;
+    bottom: 10px; /* Adjust this value to change the distance from the bottom */
+    left: 0;
+    right: 0;
+    text-align: center;
+}
+
+.pagination {
+    display: inline-block;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.pagination li {
+    display: inline;
+}
+
+.pagination a {
+    display: inline-block;
+    margin-inline: 10px;
+    text-decoration: none;
+    color: #333;
+}
+
+.pagination a:hover {
+    text-decoration: underline;
+    text-decoration-color: #041E42;
 }
