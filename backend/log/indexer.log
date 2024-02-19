@@ -3,3 +3,28 @@
 2024-02-19 11:35:45,720 - IndexerLogger - INFO - Index loaded from /Users/danielkim/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Year_4/TTDS/ttds-group-1/backend/caches/positional_index_cache.pkl
 2024-02-19 11:35:45,720 - IndexerLogger - INFO - Setting local development environment
 2024-02-19 11:35:45,720 - IndexerLogger - INFO - Updating cache paths to local paths.
+2024-02-19 16:32:51,246 - IndexerLogger - INFO - Indexer logger loaded
+2024-02-19 16:32:51,246 - IndexerLogger - INFO - Loading index from cache.
+2024-02-19 16:32:52,722 - IndexerLogger - INFO - Index loaded from /Users/danielkim/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Year_4/TTDS/ttds-group-1/backend/caches/positional_index_cache.pkl
+2024-02-19 16:32:52,722 - IndexerLogger - INFO - Setting local development environment
+2024-02-19 16:32:52,722 - IndexerLogger - INFO - Updating cache paths to local paths.
+2024-02-19 16:38:13,557 - IndexerLogger - INFO - Indexer logger loaded
+2024-02-19 16:38:13,557 - IndexerLogger - INFO - Loading index from cache.
+2024-02-19 16:38:15,019 - IndexerLogger - INFO - Index loaded from /Users/danielkim/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Year_4/TTDS/ttds-group-1/backend/caches/positional_index_cache.pkl
+2024-02-19 16:38:15,019 - IndexerLogger - INFO - Setting local development environment
+2024-02-19 16:38:15,019 - IndexerLogger - INFO - Updating cache paths to local paths.
+2024-02-19 16:41:31,263 - IndexerLogger - INFO - Indexer logger loaded
+2024-02-19 16:41:31,264 - IndexerLogger - INFO - Loading index from cache.
+2024-02-19 16:41:32,733 - IndexerLogger - INFO - Index loaded from /Users/danielkim/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Year_4/TTDS/ttds-group-1/backend/caches/positional_index_cache.pkl
+2024-02-19 16:41:32,733 - IndexerLogger - INFO - Setting local development environment
+2024-02-19 16:41:32,733 - IndexerLogger - INFO - Updating cache paths to local paths.
+2024-02-19 16:42:44,400 - IndexerLogger - INFO - Indexer logger loaded
+2024-02-19 16:42:44,400 - IndexerLogger - INFO - Loading index from cache.
+2024-02-19 16:42:45,889 - IndexerLogger - INFO - Index loaded from /Users/danielkim/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Year_4/TTDS/ttds-group-1/backend/caches/positional_index_cache.pkl
+2024-02-19 16:42:45,889 - IndexerLogger - INFO - Setting local development environment
+2024-02-19 16:42:45,890 - IndexerLogger - INFO - Updating cache paths to local paths.
+2024-02-19 16:47:55,505 - IndexerLogger - INFO - Indexer logger loaded
+2024-02-19 16:47:55,506 - IndexerLogger - INFO - Loading index from cache.
+2024-02-19 16:47:57,012 - IndexerLogger - INFO - Index loaded from /Users/danielkim/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Year_4/TTDS/ttds-group-1/backend/caches/positional_index_cache.pkl
+2024-02-19 16:47:57,012 - IndexerLogger - INFO - Setting local development environment
+2024-02-19 16:47:57,012 - IndexerLogger - INFO - Updating cache paths to local paths.
