@@ -43,9 +43,9 @@ Our final system is a full-stack, production-ready news search engine with the f
 
 We scoped out sentiment features due to concerns around bias and misrepresentation. Instead, we focused on interpretability, fairness, and retrieval performance. Revelio demonstrates a scalable, ethical approach to intelligent news search.
 
-### Architecture
+## Architecture
 ![Architecture Diagram](image/architecture.png)
 
-### Search Engine Demo
+## Search Engine Demo
 ![Engine](image/not-search.png)
 ![MObile](image/mobileview.png)
