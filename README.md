@@ -1,7 +1,6 @@
 # Revelio: A Politically Balanced News Search Engine
 
 ## My Contribution 
-- 
 - **Led back-end development** of a scalable search engine architecture processing 300,000+ news articles, implementing core components for crawling, batch indexing, Trie-based retrieval, and Redis caching.
 -  **Fine-tuned BERT-based sentiment estimators** (article- and entity-level) and optimized ranked search execution using heap-based scoring and time-capped BM25 retrieval.
 -  **Led project planning and coordination**, aligning parallel development of major features under strict deadlines. The project was awarded **2nd-best among 18 teams**.
